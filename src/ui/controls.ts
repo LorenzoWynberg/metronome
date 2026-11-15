@@ -146,9 +146,11 @@ export function mountControls(el: HTMLElement, deps: ControlsDeps): () => void {
     announce(store.getState().bpm);
   };
 
-  slider.addEventListener('input', () =>
-    store.setState({ bpm: slider.valueAsNumber }),
-  );
+  slider.addEventListener('input', () => {
+    // The tempo moved without an announcement, so the next commit is news.
+    announced = undefined;
+    store.setState({ bpm: slider.valueAsNumber });
+  });
   number.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') commitNumber();
   });

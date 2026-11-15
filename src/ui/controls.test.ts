@@ -107,6 +107,22 @@ describe('tempo', () => {
     expect(status.textContent).toBe('Tempo 100 BPM');
   });
 
+  it('announces a committed tempo again after the slider moved it away', () => {
+    const n = q<HTMLInputElement>('#bpm-number');
+    const status = q('[role=status]');
+    n.focus();
+    n.value = '90';
+    n.blur();
+    const s = q<HTMLInputElement>('input[type=range]');
+    s.value = '120';
+    s.dispatchEvent(new Event('input'));
+    status.textContent = '';
+    n.focus();
+    n.value = '90';
+    n.blur();
+    expect(status.textContent).toBe('Tempo 90 BPM');
+  });
+
   it('is not overwritten while focused; steppers adjust by one', () => {
     const n = q<HTMLInputElement>('#bpm-number');
     n.focus();

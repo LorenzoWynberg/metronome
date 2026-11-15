@@ -54,8 +54,9 @@ export function createEngine(store: Store, deps: EngineDeps = {}): Engine {
     };
     ctx.addEventListener('statechange', onStateChange);
     let scheduler: Scheduler;
+    let tickSource: TickSource | undefined;
     try {
-      const tickSource = createTickSource();
+      tickSource = createTickSource();
       // A worker that fails to load or crashes sends no more ticks: stop
       // rather than show the app as running in silence.
       tickSource.onError(() => {
@@ -68,7 +69,12 @@ export function createEngine(store: Store, deps: EngineDeps = {}): Engine {
         queue: beatQueue,
       });
     } catch (err) {
-      // Do not orphan the context: browsers cap how many may be live.
+      // Do not orphan the context or worker: browsers cap how many may be live.
+      try {
+        tickSource?.stop();
+      } catch {
+        // The original error is the one to report.
+      }
       ctx.removeEventListener('statechange', onStateChange);
       ctx.close().catch(() => undefined);
       throw err;
