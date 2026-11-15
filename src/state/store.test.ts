@@ -93,7 +93,9 @@ describe('store', () => {
     const dir = new URL('.', import.meta.url);
     for (const f of readdirSync(dir).filter((n) => n.endsWith('.ts'))) {
       const src = readFileSync(new URL(f, dir), 'utf8');
-      expect(src, f).not.toMatch(/from\s+['"][^'"]*\/(ui|audio)\//);
+      expect(src, f).not.toMatch(
+        /(?:from\s+|import\s*\(?\s*)['"][^'"]*\/(?:ui|audio)(?:\/|['"])/,
+      );
     }
   });
 });

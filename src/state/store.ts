@@ -46,6 +46,13 @@ export function createStore(opts: { storage?: StorageLike } = {}): Store {
   };
 }
 
-export const store = createStore({
-  storage: typeof localStorage !== 'undefined' ? localStorage : undefined,
-});
+function defaultStorage(): StorageLike | undefined {
+  try {
+    // Reading the global can throw (e.g. storage blocked by the browser).
+    return typeof localStorage !== 'undefined' ? localStorage : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export const store = createStore({ storage: defaultStorage() });
