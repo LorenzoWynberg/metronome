@@ -19,6 +19,8 @@ Its documentation starts at [`.trinity/docs/index.md`](.trinity/docs/index.md), 
 - Design: [`DESIGN.md`](DESIGN.md) is the source of the design. Tokens live in `src/styles/tokens.css`; style only with those custom properties (no hard-coded colours, fonts, spacing, radii or shadows). The accent is reserved for the beat and the focus ring. Flat fills only, no gradients.
 - Layers: `src/state/` holds app state and pure logic; `src/audio/` holds the scheduler and sound; `src/ui/` holds the DOM. `src/state/` and `src/audio/` never import from `src/ui/` and never touch the DOM.
 - A worker file adds `/// <reference lib="webworker" />` itself; `tsconfig.json` only lists the DOM lib.
+- Timers: only `src/audio/scheduler.worker.ts` may call `setInterval` or `setTimeout` in `src/` (`*.test.ts` files excepted). Timing runs on the Web Audio clock, ticked from that worker; `src/audio/layering.test.ts` enforces the rule.
 - Tests sit beside their code as `*.test.ts` and run in node; a DOM test opts in per file with `// @vitest-environment happy-dom`.
 - CI: `.github/workflows/deploy-pages.yml` is the single CI workflow; it only builds and deploys to GitHub Pages on push to `main` and runs no checks (tests stay in Trinity's sandbox).
+- Journey probes live in `probes/`: Node scripts that drive headless Chromium (`TRINITY_CHROMIUM_PATH`) over the DevTools pipe against `vite`/`vite preview` on `PORT`. Run one with `pnpm build && node probes/<name>.mjs`.
 - Gate commands are the pnpm scripts: `test`, `lint`, `typecheck`, `format:check`, `build`.
