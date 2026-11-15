@@ -133,8 +133,10 @@ export function mountControls(el: HTMLElement, deps: ControlsDeps): () => void {
     announce(store.getState().bpm);
   };
 
-  const step = (delta: number): void =>
+  const step = (delta: number): void => {
     store.setState({ bpm: store.getState().bpm + delta });
+    announce(store.getState().bpm);
+  };
 
   slider.addEventListener('input', () =>
     store.setState({ bpm: slider.valueAsNumber }),

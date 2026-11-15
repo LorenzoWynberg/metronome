@@ -102,6 +102,7 @@ describe('tempo', () => {
     button('−').click();
     button('−').click();
     expect(store.getState().bpm).toBe(98);
+    expect(q('[role=status]').textContent).toBe('Tempo 98 BPM');
   });
 
   it('slider input does not announce', () => {
@@ -151,11 +152,24 @@ describe('tap', () => {
     now = 1000;
     button('Tap').click();
     expect(store.getState().bpm).toBe(120);
-    now = 1500;
+    now = 1600;
+    key('t');
+    expect(store.getState().bpm).toBe(100);
+    expect(q('[role=status]').textContent).toBe('Tempo 100 BPM');
+    expect(engine.start).not.toHaveBeenCalled();
+  });
+
+  it('T is ignored on repeat, with modifiers and in the number input', () => {
+    now = 1000;
+    button('Tap').click();
+    now = 1600;
+    key('t', { repeat: true });
+    key('t', { ctrlKey: true });
+    key('t', { metaKey: true });
+    key('t', { altKey: true });
+    q<HTMLInputElement>('#bpm-number').focus();
     key('t');
     expect(store.getState().bpm).toBe(120);
-    expect(q('[role=status]').textContent).toBe('Tempo 120 BPM');
-    expect(engine.start).not.toHaveBeenCalled();
   });
 });
 
