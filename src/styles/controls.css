@@ -111,6 +111,20 @@ input[type='radio'] {
   accent-color: var(--primary);
 }
 
+/* Text carries the meaning; the danger border only backs it up. */
+.error-message {
+  margin: 0;
+  padding: var(--spacing-3) var(--spacing-4);
+  background: var(--surface);
+  color: var(--foreground);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-md);
+}
+
+.error-message[hidden] {
+  display: none;
+}
+
 kbd {
   font-family: var(--font-mono);
   font-size: var(--text-sm);

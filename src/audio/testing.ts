@@ -71,6 +71,9 @@ export class FakeAudioContext {
   readonly oscillators: FakeOscillator[] = [];
   readonly gains: FakeGain[] = [];
   resumeCalls = 0;
+  closeCalls = 0;
+  /** Replaces `resume()`'s behaviour, e.g. one that never settles or rejects. */
+  resumeImpl: (() => Promise<void>) | undefined;
   private readonly listeners: (() => void)[] = [];
 
   constructor(state: ContextState = 'suspended') {
@@ -89,10 +92,24 @@ export class FakeAudioContext {
   }
   async resume(): Promise<void> {
     this.resumeCalls++;
+    if (this.resumeImpl) return this.resumeImpl();
     this.changeState('running');
+  }
+  async close(): Promise<void> {
+    this.closeCalls++;
+    this.changeState('closed');
   }
   addEventListener(type: string, listener: () => void): void {
     if (type === 'statechange') this.listeners.push(listener);
+  }
+  removeEventListener(type: string, listener: () => void): void {
+    if (type !== 'statechange') return;
+    const i = this.listeners.indexOf(listener);
+    if (i >= 0) this.listeners.splice(i, 1);
+  }
+  /** How many `statechange` listeners are attached. */
+  get listenerCount(): number {
+    return this.listeners.length;
   }
   /** Sets the state and dispatches `statechange`, as a browser does. */
   changeState(state: ContextState): void {
@@ -115,6 +132,8 @@ export class ManualTickSource implements TickSource {
   startCalls = 0;
   stopCalls = 0;
   onTickCalls = 0;
+  disposeCalls = 0;
+  disposed = false;
   private cb: (() => void) | undefined;
   private errorCb: ((error: unknown) => void) | undefined;
 
@@ -126,6 +145,11 @@ export class ManualTickSource implements TickSource {
   stop(): void {
     this.running = false;
     this.stopCalls++;
+  }
+  dispose(): void {
+    this.running = false;
+    this.disposed = true;
+    this.disposeCalls++;
   }
   onTick(cb: () => void): void {
     this.cb = cb;

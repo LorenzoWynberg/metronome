@@ -67,4 +67,39 @@ describe('worker tick source', () => {
       { type: 'start', intervalMs: 25 },
     ]);
   });
+
+  it('dispose() ends the worker, drops its handlers and stops all callbacks', () => {
+    const { source, onTick, onError } = setup();
+    source.start(25);
+    const worker = FakeWorker.instances[0]!;
+
+    source.dispose();
+
+    expect(worker.terminated).toBe(true);
+    expect(worker.posted.at(-1)).toEqual({ type: 'stop' });
+    expect(worker.onmessage).toBeNull();
+    expect(worker.onerror).toBeNull();
+    expect(onTick).not.toHaveBeenCalled();
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it('start() after dispose() creates no worker, and stop()/dispose() do not throw', () => {
+    const { source } = setup();
+    source.start(25);
+    source.dispose();
+
+    source.start(25);
+    expect(FakeWorker.instances).toHaveLength(1);
+    expect(() => {
+      source.stop();
+      source.dispose();
+    }).not.toThrow();
+  });
+
+  it('dispose() before any start() does not throw and creates no worker', () => {
+    const { source } = setup();
+    expect(() => source.dispose()).not.toThrow();
+    source.start(25);
+    expect(FakeWorker.instances).toHaveLength(0);
+  });
 });

@@ -6,7 +6,7 @@ import { MAX_BPM, MIN_BPM } from '../state/tempo';
 
 export interface ControlsDeps {
   store: Store;
-  engine: Pick<Engine, 'start' | 'stop'>;
+  engine: Pick<Engine, 'start' | 'stop' | 'onError'>;
   tapTempo?: TapTempo;
   doc?: Document;
 }
@@ -94,7 +94,28 @@ export function mountControls(el: HTMLElement, deps: ControlsDeps): () => void {
   status.setAttribute('role', 'status');
   status.setAttribute('aria-live', 'polite');
 
-  el.replaceChildren(tempo, transport, fieldset, tapGroup, status);
+  // Shown when audio fails; never stored. Hidden again once playback runs.
+  const errorMessage = make('p');
+  errorMessage.className = 'error-message';
+  errorMessage.setAttribute('role', 'alert');
+  errorMessage.hidden = true;
+  const showError = (text: string): void => {
+    errorMessage.textContent = text;
+    errorMessage.hidden = false;
+  };
+  const clearError = (): void => {
+    errorMessage.textContent = '';
+    errorMessage.hidden = true;
+  };
+
+  el.replaceChildren(
+    tempo,
+    transport,
+    fieldset,
+    tapGroup,
+    status,
+    errorMessage,
+  );
 
   let announced: number | undefined;
   const announce = (bpm: number): void => {
@@ -108,6 +129,7 @@ export function mountControls(el: HTMLElement, deps: ControlsDeps): () => void {
     if (doc.activeElement !== number) number.value = String(bpm);
     toggle.textContent = running ? 'Stop' : 'Start';
     toggle.setAttribute('aria-pressed', String(running));
+    if (running) clearError();
     for (const r of radios) r.checked = r.value === timeSignature;
   };
 
@@ -127,9 +149,9 @@ export function mountControls(el: HTMLElement, deps: ControlsDeps): () => void {
   const toggleRunning = (): void => {
     if (store.getState().running) engine.stop();
     else {
-      engine.start().catch((err: unknown) => {
+      engine.start().catch(() => {
         // The store stays at running:false, so the button stays on Start.
-        console.error('Metronome could not start', err);
+        showError('Could not start audio. Press Start to try again.');
       });
     }
   };
@@ -151,6 +173,9 @@ export function mountControls(el: HTMLElement, deps: ControlsDeps): () => void {
     announced = undefined;
     store.setState({ bpm: slider.valueAsNumber });
   });
+  // Spinner clicks and ArrowUp/Down fire `change`; typed digits fire only
+  // `input`, so a half-typed tempo is not clamped under the cursor.
+  number.addEventListener('change', commitNumber);
   number.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') commitNumber();
   });
@@ -189,8 +214,12 @@ export function mountControls(el: HTMLElement, deps: ControlsDeps): () => void {
 
   paint();
   const off = store.subscribe(paint);
+  const offError = engine.onError(() => {
+    showError('Playback stopped after an audio error.');
+  });
   return () => {
     off();
+    offError();
     doc.removeEventListener('keydown', onKeydown);
     doc.removeEventListener('keyup', onKeyup);
   };
