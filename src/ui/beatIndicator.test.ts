@@ -1,6 +1,5 @@
 // @vitest-environment happy-dom
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createBeatQueue, type BeatEvent } from '../audio/beatQueue';
 import { createStore } from '../state/store';
@@ -166,10 +165,7 @@ describe('mountBeatIndicator', () => {
 });
 
 describe('beatIndicator.css', () => {
-  const css = readFileSync(
-    resolve(import.meta.dirname, '../styles/beatIndicator.css'),
-    'utf8',
-  );
+  const css = readFileSync('src/styles/beatIndicator.css', 'utf8');
 
   it('uses tokens only', () => {
     expect(css).toContain('var(--accent)');
