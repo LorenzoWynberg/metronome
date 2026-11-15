@@ -6,12 +6,14 @@ import type {
 
 /**
  * The production tick source: a Web Worker posts the ticks, so they keep
- * coming while the tab is hidden. The Worker is created on the first `start`.
+ * coming while the tab is hidden. The Worker is created on the first `start`
+ * and ended by `dispose`.
  */
 export function createWorkerTickSource(): TickSource {
   let worker: Worker | undefined;
   let listener: (() => void) | undefined;
   let errorListener: ((error: unknown) => void) | undefined;
+  let disposed = false;
 
   function post(request: SchedulerWorkerRequest): void {
     worker?.postMessage(request);
@@ -25,6 +27,7 @@ export function createWorkerTickSource(): TickSource {
       errorListener = cb;
     },
     start(intervalMs) {
+      if (disposed) return;
       if (!worker) {
         // Keep the `new URL(...)` literal inside `new Worker(...)`: Vite
         // recognises this exact form and emits the worker as its own chunk.
@@ -46,6 +49,19 @@ export function createWorkerTickSource(): TickSource {
     },
     stop() {
       post({ type: 'stop' });
+    },
+    dispose() {
+      if (disposed) return;
+      disposed = true;
+      const dead = worker;
+      worker = undefined;
+      listener = undefined;
+      errorListener = undefined;
+      if (!dead) return;
+      dead.postMessage({ type: 'stop' } satisfies SchedulerWorkerRequest);
+      dead.onmessage = null;
+      dead.onerror = null;
+      dead.terminate();
     },
   };
 }

@@ -16,7 +16,10 @@ let store: Store;
 let engine: {
   start: Mock<() => Promise<void>>;
   stop: Mock<() => void>;
+  onError: Mock<(cb: (error: unknown) => void) => () => void>;
 };
+let failEngine: (error?: unknown) => void;
+let offError: Mock<() => void>;
 let now: number;
 let dispose: () => void;
 let root: HTMLElement;
@@ -47,7 +50,15 @@ beforeEach(() => {
     stop: vi.fn(() => {
       store.setState({ running: false });
     }),
+    onError: vi.fn((cb: (error: unknown) => void) => {
+      failEngine = (error = new Error('audio failed')) => {
+        store.setState({ running: false });
+        cb(error);
+      };
+      return offError;
+    }),
   };
+  offError = vi.fn();
   now = 0;
   root = document.createElement('div');
   document.body.append(root);
@@ -88,6 +99,23 @@ describe('tempo', () => {
     expect(store.getState().bpm).toBe(240);
     n.value = '';
     n.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    expect(n.value).toBe('240');
+  });
+
+  it('number commits on `change` (spinner, arrow keys) and clamps; typing alone does not', () => {
+    const n = q<HTMLInputElement>('#bpm-number');
+    n.value = '150';
+    n.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(store.getState().bpm).toBe(120);
+    expect(n.value).toBe('150');
+
+    n.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(store.getState().bpm).toBe(150);
+    expect(q('[role=status]').textContent).toBe('Tempo 150 BPM');
+
+    n.value = '999';
+    n.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(store.getState().bpm).toBe(240);
     expect(n.value).toBe('240');
   });
 
@@ -158,18 +186,6 @@ describe('transport', () => {
     store.setState({ running: true });
     store.setState({ running: false });
     expect(button('Start')).toBeTruthy();
-  });
-
-  it('a rejecting start leaves the button on Start and logs the cause', async () => {
-    const err = new Error('no audio');
-    engine.start.mockRejectedValueOnce(err);
-    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    button('Start').click();
-    await new Promise((r) => setTimeout(r, 0));
-    expect(spy).toHaveBeenCalledWith('Metronome could not start', err);
-    expect(button('Start').getAttribute('aria-pressed')).toBe('false');
-    expect(store.getState().running).toBe(false);
-    spy.mockRestore();
   });
 
   it('radios set the signature without touching the engine', () => {
@@ -244,5 +260,53 @@ describe('keyboard', () => {
     const e = key(' ');
     expect(e.defaultPrevented).toBe(false);
     expect(engine.start).not.toHaveBeenCalled();
+  });
+});
+
+describe('audio failures', () => {
+  const alert = (): HTMLElement => q('[role=alert]');
+
+  it('shows no message until something fails', () => {
+    expect(alert().hidden).toBe(true);
+    expect(alert().textContent).toBe('');
+  });
+
+  it('a rejected start() shows a message and leaves the button on Start', async () => {
+    engine.start.mockRejectedValueOnce(new Error('resume timed out'));
+    button('Start').click();
+    await vi.waitFor(() => expect(alert().hidden).toBe(false));
+
+    expect(alert().textContent).toBe(
+      'Could not start audio. Press Start to try again.',
+    );
+    expect(store.getState().running).toBe(false);
+    expect(button('Start').getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('an engine error during playback shows a message', () => {
+    button('Start').click();
+    expect(store.getState().running).toBe(true);
+    failEngine();
+
+    expect(alert().hidden).toBe(false);
+    expect(alert().textContent).toBe('Playback stopped after an audio error.');
+    expect(button('Start')).toBeDefined();
+  });
+
+  it('the message clears when playback starts again', async () => {
+    engine.start.mockRejectedValueOnce(new Error('blocked'));
+    button('Start').click();
+    await vi.waitFor(() => expect(alert().hidden).toBe(false));
+
+    button('Start').click();
+    await vi.waitFor(() => expect(store.getState().running).toBe(true));
+    expect(alert().hidden).toBe(true);
+    expect(alert().textContent).toBe('');
+  });
+
+  it('unsubscribes from engine errors when disposed', () => {
+    dispose();
+    expect(offError).toHaveBeenCalledOnce();
+    dispose = () => undefined;
   });
 });

@@ -19,6 +19,8 @@ export interface TickSource {
   onTick(cb: () => void): void;
   /** Called when the source fails and will deliver no more ticks. */
   onError(cb: (error: unknown) => void): void;
+  /** Releases the source for good: no more ticks, and `start` does nothing. */
+  dispose(): void;
 }
 
 export interface Scheduler {
@@ -31,6 +33,8 @@ export interface SchedulerDeps {
   store: Pick<Store, 'getState'>;
   tickSource: TickSource;
   queue: BeatQueue;
+  /** Called when a tick throws; the scheduler has already stopped itself. */
+  onError?: (error: unknown) => void;
 }
 
 /**
@@ -44,6 +48,7 @@ export function createScheduler({
   store,
   tickSource,
   queue,
+  onError,
 }: SchedulerDeps): Scheduler {
   let active = false;
   let firstBeatTime = 0;
@@ -91,7 +96,32 @@ export function createScheduler({
     }
   }
 
-  tickSource.onTick(tick);
+  /** Stops ticking and silences clicks that are scheduled but not yet heard. */
+  function halt(): void {
+    active = false;
+    try {
+      tickSource.stop();
+    } finally {
+      const now = ctx.currentTime;
+      for (const s of scheduled) if (s.time > now) s.node.stop();
+      scheduled = [];
+    }
+  }
+
+  tickSource.onTick(() => {
+    try {
+      tick();
+    } catch (error) {
+      // A throwing tick would otherwise leave the app showing "running" while
+      // no more beats are scheduled: stop, then tell the owner.
+      if (!active) return;
+      try {
+        halt();
+      } finally {
+        onError?.(error);
+      }
+    }
+  });
 
   return {
     start() {
@@ -113,12 +143,7 @@ export function createScheduler({
     },
     stop() {
       if (!active) return;
-      active = false;
-      tickSource.stop();
-      const now = ctx.currentTime;
-      // Silence clicks that are scheduled but have not sounded yet.
-      for (const s of scheduled) if (s.time > now) s.node.stop();
-      scheduled = [];
+      halt();
     },
   };
 }

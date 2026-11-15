@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createStore } from '../state/store';
-import { createEngine } from './engine';
+import { createEngine, RESUME_TIMEOUT_MS } from './engine';
 import type { SchedulerWorkerRequest } from './scheduler.worker';
 import { FakeAudioContext, ManualTickSource, runFor } from './testing';
 
@@ -12,8 +12,27 @@ function setup(
   const ticks = new ManualTickSource();
   const createContext = vi.fn(() => ctx.asAudioContext());
   const createTickSource = vi.fn(() => ticks);
-  const engine = createEngine(store, { createContext, createTickSource });
-  return { store, ctx, ticks, engine, createContext, createTickSource };
+  // `resume()` is bounded by a signal the test aborts by hand.
+  const timeouts: { ms: number; abort: () => void }[] = [];
+  const timeoutSignal = vi.fn((ms: number) => {
+    const controller = new AbortController();
+    timeouts.push({ ms, abort: () => controller.abort() });
+    return controller.signal;
+  });
+  const engine = createEngine(store, {
+    createContext,
+    createTickSource,
+    timeoutSignal,
+  });
+  return {
+    store,
+    ctx,
+    ticks,
+    engine,
+    createContext,
+    createTickSource,
+    timeouts,
+  };
 }
 
 afterEach(() => {
@@ -178,9 +197,17 @@ describe('engine', () => {
     const first = new FakeAudioContext('running');
     const second = new FakeAudioContext('running');
     const contexts = [first, second];
+    const sources: ManualTickSource[] = [];
+    const createTickSource = vi.fn(() => {
+      // The old source is gone before the next one is made.
+      expect(sources.at(-1)?.disposeCalls ?? 1).toBe(1);
+      const source = new ManualTickSource();
+      sources.push(source);
+      return source;
+    });
     const engine = createEngine(store, {
       createContext: () => contexts.shift()!.asAudioContext(),
-      createTickSource: () => new ManualTickSource(),
+      createTickSource,
     });
     await engine.start();
     first.changeState('closed');
@@ -189,6 +216,11 @@ describe('engine', () => {
     await engine.start();
     expect(store.getState().running).toBe(true);
     expect(second.oscillators).toHaveLength(1);
+    expect(sources).toHaveLength(2);
+    expect(sources[0]?.disposed).toBe(true);
+    expect(sources[0]?.disposeCalls).toBe(1);
+    expect(sources[1]?.disposed).toBe(false);
+    expect(first.listenerCount).toBe(0);
   });
 
   it('closes the context when the tick source throws and makes a fresh one on retry', async () => {
@@ -246,6 +278,118 @@ describe('engine', () => {
     expect(engine.beatQueue.takeDue(Infinity)).toEqual([]);
     runFor(ctx, ticks, 1);
     expect(ctx.oscillators).toHaveLength(1);
+  });
+});
+
+describe('engine failure paths', () => {
+  it('dispose() stops playback, disposes the source, closes the context and drops listeners', async () => {
+    const { store, ctx, ticks, engine } = setup();
+    const onError = vi.fn();
+    engine.onError(onError);
+    await engine.start();
+
+    engine.dispose();
+
+    expect(store.getState().running).toBe(false);
+    expect(ticks.disposeCalls).toBe(1);
+    expect(ctx.closeCalls).toBe(1);
+    expect(ctx.listenerCount).toBe(0);
+    ticks.fail();
+    expect(onError).not.toHaveBeenCalled();
+    expect(engine.currentTime()).toBe(0);
+  });
+
+  it('dispose() before any start() does not throw', () => {
+    const { engine } = setup();
+    expect(() => engine.dispose()).not.toThrow();
+  });
+
+  it('a tick that throws stops playback, tells onError listeners and ticks no more', async () => {
+    const { store, ctx, ticks, engine } = setup();
+    const onError = vi.fn();
+    const off = engine.onError(onError);
+    await engine.start();
+    runFor(ctx, ticks, 0.5);
+    const failure = new Error('store broke');
+    const getState = store.getState;
+    store.getState = () => {
+      throw failure;
+    };
+
+    ctx.currentTime += 0.025;
+    ticks.fire();
+    store.getState = getState;
+    expect(store.getState().running).toBe(false);
+
+    expect(onError).toHaveBeenCalledExactlyOnceWith(failure);
+    expect(ticks.running).toBe(false);
+    const scheduled = ctx.oscillators.length;
+    runFor(ctx, ticks, 1);
+    expect(ctx.oscillators).toHaveLength(scheduled);
+    expect(onError).toHaveBeenCalledTimes(1);
+    off();
+  });
+
+  it('tells onError listeners when the tick source dies, until they unsubscribe', async () => {
+    const { ticks, engine } = setup();
+    const onError = vi.fn();
+    const off = engine.onError(onError);
+    await engine.start();
+    const failure = new Error('worker crashed');
+    ticks.fail(failure);
+    expect(onError).toHaveBeenCalledExactlyOnceWith(failure);
+
+    off();
+    await engine.start();
+    ticks.fail();
+    expect(onError).toHaveBeenCalledTimes(1);
+  });
+
+  it('a resume that never settles rejects after the timeout and leaves running false', async () => {
+    const { store, ctx, ticks, engine, timeouts } = setup('suspended');
+    ctx.resumeImpl = () => new Promise<void>(() => undefined);
+    const starting = engine.start();
+    const settled = expect(starting).rejects.toThrow(/resume timed out/);
+
+    expect(timeouts.map((t) => t.ms)).toEqual([RESUME_TIMEOUT_MS]);
+    timeouts[0]?.abort();
+    await settled;
+
+    expect(store.getState().running).toBe(false);
+    expect(ticks.running).toBe(false);
+  });
+
+  it('a resume that settles after the timeout starts nothing', async () => {
+    const { store, ctx, ticks, engine, timeouts } = setup('suspended');
+    let resolveResume = (): void => undefined;
+    ctx.resumeImpl = () =>
+      new Promise<void>((resolve) => {
+        resolveResume = () => {
+          ctx.changeState('running');
+          resolve();
+        };
+      });
+    const starting = engine.start();
+    const settled = expect(starting).rejects.toThrow(/resume timed out/);
+    timeouts[0]?.abort();
+    await settled;
+
+    resolveResume();
+    await Promise.resolve();
+    expect(ticks.running).toBe(false);
+    expect(store.getState().running).toBe(false);
+  });
+
+  it('a rejected resume rejects the start, leaves running false and allows a retry', async () => {
+    const { store, ctx, ticks, engine } = setup('suspended');
+    ctx.resumeImpl = () => Promise.reject(new Error('resume blocked'));
+    await expect(engine.start()).rejects.toThrow('resume blocked');
+    expect(store.getState().running).toBe(false);
+    expect(ticks.running).toBe(false);
+
+    ctx.resumeImpl = undefined;
+    await engine.start();
+    expect(store.getState().running).toBe(true);
   });
 });
 

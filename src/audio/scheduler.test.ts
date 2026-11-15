@@ -13,6 +13,7 @@ import {
 import { FakeAudioContext, ManualTickSource, runFor } from './testing';
 
 function setup(initial: Partial<MetronomeState> = {}) {
+  const onError = vi.fn();
   const store = createStore();
   store.setState(initial);
   const ctx = new FakeAudioContext('running');
@@ -24,10 +25,11 @@ function setup(initial: Partial<MetronomeState> = {}) {
     store,
     tickSource: ticks,
     queue,
+    onError,
   });
   const events: BeatEvent[] = [];
   const drain = () => events.push(...queue.takeDue(Infinity));
-  return { store, ctx, ticks, queue, scheduler, events, drain };
+  return { store, ctx, ticks, queue, scheduler, events, drain, onError };
 }
 
 const diffs = (times: number[]) => times.slice(1).map((t, i) => t - times[i]!);
@@ -225,5 +227,40 @@ describe('scheduler', () => {
     expect(events[0]).toMatchObject({ beat: 0, level: 'strong' });
     expect(events[0]?.audioTime).toBeCloseTo(20.05, 9);
     expect(ticks.onTickCalls).toBe(1);
+  });
+
+  it('a tick that throws stops the scheduler, cuts future clicks and reports once', () => {
+    const { store, ctx, ticks, scheduler, onError } = setup({ bpm: 120 });
+    scheduler.start();
+    runFor(ctx, ticks, 0.5);
+    const scheduledBefore = ctx.oscillators.length;
+    const future = ctx.oscillators.find((o) => o.startTime > ctx.currentTime);
+    const failure = new Error('store broke');
+    store.getState = () => {
+      throw failure;
+    };
+
+    ctx.currentTime += TICK_MS / 1000;
+    expect(() => ticks.fire()).not.toThrow();
+
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError).toHaveBeenCalledWith(failure);
+    expect(ticks.stopCalls).toBe(1);
+    expect(ticks.running).toBe(false);
+    if (future) expect(future.stopCalls.at(-1)).toBeUndefined();
+
+    runFor(ctx, ticks, 1);
+    expect(ctx.oscillators).toHaveLength(scheduledBefore);
+    expect(onError).toHaveBeenCalledTimes(1);
+  });
+
+  it('a tick that throws inside start() rejects the start instead of calling onError', () => {
+    const { store, ticks, scheduler, onError } = setup();
+    store.getState = () => {
+      throw new Error('store broke');
+    };
+    expect(() => scheduler.start()).toThrow('store broke');
+    expect(onError).not.toHaveBeenCalled();
+    expect(ticks.stopCalls).toBe(1);
   });
 });
