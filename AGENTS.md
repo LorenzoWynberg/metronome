@@ -22,4 +22,5 @@ Its documentation starts at [`.trinity/docs/index.md`](.trinity/docs/index.md), 
 - Timers: only `src/audio/scheduler.worker.ts` may call `setInterval` or `setTimeout` in `src/` (`*.test.ts` files excepted). Timing runs on the Web Audio clock, ticked from that worker; `src/audio/layering.test.ts` enforces the rule.
 - Tests sit beside their code as `*.test.ts` and run in node; a DOM test opts in per file with `// @vitest-environment happy-dom`.
 - CI: `.github/workflows/deploy-pages.yml` is the single CI workflow; it only builds and deploys to GitHub Pages on push to `main` and runs no checks (tests stay in Trinity's sandbox).
+- Journey probes live in `probes/`: Node scripts that drive headless Chromium (`TRINITY_CHROMIUM_PATH`) over the DevTools pipe against `vite`/`vite preview` on `PORT`. Run one with `pnpm build && node probes/<name>.mjs`.
 - Gate commands are the pnpm scripts: `test`, `lint`, `typecheck`, `format:check`, `build`.
