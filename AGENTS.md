@@ -20,4 +20,5 @@ Its documentation starts at [`.trinity/docs/index.md`](.trinity/docs/index.md), 
 - Layers: `src/state/` holds app state and pure logic; `src/audio/` holds the scheduler and sound; `src/ui/` holds the DOM. `src/state/` and `src/audio/` never import from `src/ui/` and never touch the DOM.
 - A worker file adds `/// <reference lib="webworker" />` itself; `tsconfig.json` only lists the DOM lib.
 - Tests sit beside their code as `*.test.ts` and run in node; a DOM test opts in per file with `// @vitest-environment happy-dom`.
+- CI: `.github/workflows/deploy-pages.yml` is the single CI workflow; it only builds and deploys to GitHub Pages on push to `main` and runs no checks (tests stay in Trinity's sandbox).
 - Gate commands are the pnpm scripts: `test`, `lint`, `typecheck`, `format:check`, `build`.
