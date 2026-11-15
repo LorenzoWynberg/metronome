@@ -14,7 +14,10 @@ A small browser metronome built with Vite and vanilla TypeScript, served under `
 
 ## Pages
 
+- [Architecture rule](rules/architecture.md)
 - [Styling rule](rules/styling.md)
+- [Testing rule](rules/testing.md)
+- [Tooling rule](rules/tooling.md)
 - [App shell](tech-guide/app/shell.md)
 - [Controls panel](tech-guide/app/controls.md)
 - [Beat indicator](tech-guide/app/beat-indicator.md)
