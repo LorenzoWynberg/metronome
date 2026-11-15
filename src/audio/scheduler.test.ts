@@ -247,7 +247,10 @@ describe('scheduler', () => {
     expect(onError).toHaveBeenCalledWith(failure);
     expect(ticks.stopCalls).toBe(1);
     expect(ticks.running).toBe(false);
-    if (future) expect(future.stopCalls.at(-1)).toBeUndefined();
+    expect(future).toBeDefined();
+    // The scheduled stop, then the immediate one from the halt.
+    expect(future?.stopCalls).toHaveLength(2);
+    expect(future?.stopCalls.at(-1)).toBeUndefined();
 
     runFor(ctx, ticks, 1);
     expect(ctx.oscillators).toHaveLength(scheduledBefore);
@@ -262,5 +265,32 @@ describe('scheduler', () => {
     expect(() => scheduler.start()).toThrow('store broke');
     expect(onError).not.toHaveBeenCalled();
     expect(ticks.stopCalls).toBe(1);
+  });
+
+  it('a start() that throws after scheduling a click silences that click', () => {
+    const { ctx, queue, scheduler } = setup();
+    queue.push = () => {
+      throw new Error('queue broke');
+    };
+    expect(() => scheduler.start()).toThrow('queue broke');
+    expect(ctx.oscillators).toHaveLength(1);
+    expect(ctx.oscillators[0]?.stopCalls.at(-1)).toBeUndefined();
+  });
+
+  it('a tick that throws reports its own error when halting throws too', () => {
+    const { store, ctx, ticks, scheduler, onError } = setup();
+    scheduler.start();
+    runFor(ctx, ticks, 0.5);
+    const failure = new Error('store broke');
+    store.getState = () => {
+      throw failure;
+    };
+    ticks.stop = () => {
+      throw new Error('stop broke');
+    };
+
+    ctx.currentTime += TICK_MS / 1000;
+    expect(() => ticks.fire()).not.toThrow();
+    expect(onError).toHaveBeenCalledExactlyOnceWith(failure);
   });
 });

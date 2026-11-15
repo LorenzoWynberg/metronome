@@ -380,6 +380,31 @@ describe('engine failure paths', () => {
     expect(store.getState().running).toBe(false);
   });
 
+  it('bounds resume() with AbortSignal.timeout(RESUME_TIMEOUT_MS) by default', async () => {
+    const store = createStore();
+    const ctx = new FakeAudioContext('suspended');
+    ctx.resumeImpl = () => new Promise<void>(() => undefined);
+    const controller = new AbortController();
+    const timeout = vi
+      .spyOn(AbortSignal, 'timeout')
+      .mockReturnValue(controller.signal);
+    try {
+      const engine = createEngine(store, {
+        createContext: () => ctx.asAudioContext(),
+        createTickSource: () => new ManualTickSource(),
+      });
+      const settled = expect(engine.start()).rejects.toThrow(
+        /resume timed out/,
+      );
+      expect(timeout).toHaveBeenCalledExactlyOnceWith(RESUME_TIMEOUT_MS);
+      controller.abort();
+      await settled;
+      expect(store.getState().running).toBe(false);
+    } finally {
+      timeout.mockRestore();
+    }
+  });
+
   it('a rejected resume rejects the start, leaves running false and allows a retry', async () => {
     const { store, ctx, ticks, engine } = setup('suspended');
     ctx.resumeImpl = () => Promise.reject(new Error('resume blocked'));

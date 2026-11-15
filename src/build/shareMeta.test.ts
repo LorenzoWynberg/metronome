@@ -1,5 +1,28 @@
 import { describe, expect, it } from 'vitest';
+import indexHtml from '../../index.html?raw';
 import { checkShareMeta, REQUIRED_SHARE_TAGS } from './shareMeta';
+
+const SITE = 'https://lorenzowynberg.github.io/metronome/';
+
+describe('index.html', () => {
+  it('carries every share and search tag', () => {
+    expect(checkShareMeta(indexHtml)).toEqual([]);
+  });
+
+  it('points its share images at a file that ships from public/', () => {
+    const images = [
+      ...indexHtml.matchAll(
+        /(?:property|name)="(?:og|twitter):image"\s+content="([^"]+)"/g,
+      ),
+    ].map((m) => m[1] ?? '');
+    expect(images).toHaveLength(2);
+    const publicFiles = Object.keys(import.meta.glob('/public/*.png'));
+    for (const url of images) {
+      expect(url.startsWith(SITE)).toBe(true);
+      expect(publicFiles).toContain(`/public/${url.slice(SITE.length)}`);
+    }
+  });
+});
 
 const tagFor = (key: string, content: string): string => {
   const attr = key.startsWith('og:') ? 'property' : 'name';

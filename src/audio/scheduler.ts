@@ -117,9 +117,10 @@ export function createScheduler({
       if (!active) return;
       try {
         halt();
-      } finally {
-        onError?.(error);
+      } catch {
+        // The tick's error is the one to report.
       }
+      onError?.(error);
     }
   });
 
@@ -135,9 +136,13 @@ export function createScheduler({
         tickSource.start(TICK_MS);
         tick();
       } catch (error) {
-        // Leave nothing half-started, so a later `start()` can try again.
-        active = false;
-        tickSource.stop();
+        // Leave nothing half-started (no click left to sound), so a later
+        // `start()` can try again.
+        try {
+          halt();
+        } catch {
+          // The start's error is the one to report.
+        }
         throw error;
       }
     },
