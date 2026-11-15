@@ -5,9 +5,6 @@ A small browser metronome built with Vite and vanilla TypeScript, served under `
 ## Rules for every change
 
 - Style only with the design tokens; see [Styling](rules/styling.md).
-- Layers, timers and workers: [Architecture](rules/architecture.md).
-- Tests and probes: [Testing](rules/testing.md).
-- Stack, CI and gate commands: [Tooling](rules/tooling.md).
 - Design source: [`DESIGN.md`](../../DESIGN.md).
 
 ## Commands
@@ -18,9 +15,6 @@ A small browser metronome built with Vite and vanilla TypeScript, served under `
 ## Pages
 
 - [Styling rule](rules/styling.md)
-- [Architecture rule](rules/architecture.md)
-- [Testing rule](rules/testing.md)
-- [Tooling rule](rules/tooling.md)
 - [App shell](tech-guide/app/shell.md)
 - [Controls panel](tech-guide/app/controls.md)
 - [Beat indicator](tech-guide/app/beat-indicator.md)

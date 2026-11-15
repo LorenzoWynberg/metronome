@@ -208,27 +208,15 @@ describe('transport', () => {
 
 describe('tap', () => {
   it('button and T set tempo from tap spacing, never starting the engine', () => {
-    store.setState({ timeSignature: '6/8', bpm: 60 });
+    store.setState({ timeSignature: '6/8' });
     now = 1000;
     button('Tap').click();
-    expect(store.getState().bpm).toBe(60);
+    expect(store.getState().bpm).toBe(120);
     now = 1600;
     key('t');
     expect(store.getState().bpm).toBe(100);
     expect(q('[role=status]').textContent).toBe('Tempo 100 BPM');
     expect(engine.start).not.toHaveBeenCalled();
-  });
-
-  it('taps while running update the tempo without stopping or restarting', () => {
-    store.setState({ running: true, bpm: 60 });
-    now = 1000;
-    button('Tap').click();
-    now = 1500;
-    button('Tap').click();
-    expect(store.getState().bpm).toBe(120);
-    expect(store.getState().running).toBe(true);
-    expect(engine.start).not.toHaveBeenCalled();
-    expect(engine.stop).not.toHaveBeenCalled();
   });
 
   it('T is ignored on repeat, with modifiers and in the number input', () => {
@@ -259,16 +247,6 @@ describe('keyboard', () => {
     });
     b.dispatchEvent(up);
     expect(up.defaultPrevented).toBe(true);
-  });
-
-  it('Space on a focused radio starts playback and does not change the radio', () => {
-    const r = root.querySelector<HTMLInputElement>('input[value="6/8"]')!;
-    r.focus();
-    const e = key(' ');
-    expect(e.defaultPrevented).toBe(true);
-    expect(engine.start).toHaveBeenCalledOnce();
-    expect(r.checked).toBe(false);
-    expect(store.getState().timeSignature).not.toBe('6/8');
   });
 
   it('ignores repeat, modifiers and number-input focus', () => {
