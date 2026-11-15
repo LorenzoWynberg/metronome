@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Metronome</title>
+    <meta
+      name="description"
+      content="A simple browser metronome: set the tempo and time signature, tap to set the tempo, and hear an accented first beat."
+    />
+    <meta property="og:title" content="Metronome" />
+    <meta
+      property="og:description"
+      content="A simple browser metronome: set the tempo and time signature, tap to set the tempo, and hear an accented first beat."
+    />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:url"
+      content="https://lorenzowynberg.github.io/metronome/"
+    />
+    <meta
+      property="og:image"
+      content="https://lorenzowynberg.github.io/metronome/og-image.png"
+    />
+    <meta
+      property="og:image:alt"
+      content="An amber downbeat dot followed by three smaller beat dots on a dark background."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Metronome" />
+    <meta
+      name="twitter:description"
+      content="A simple browser metronome: set the tempo and time signature, tap to set the tempo, and hear an accented first beat."
+    />
+    <meta
+      name="twitter:image"
+      content="https://lorenzowynberg.github.io/metronome/og-image.png"
+    />
+  </head>
+  <body>
+    <main>
+      <h1 class="visually-hidden">Metronome</h1>
+      <section id="bpm-hero" aria-label="Tempo"></section>
+      <div id="beat-indicator"></div>
+      <div id="controls"></div>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
