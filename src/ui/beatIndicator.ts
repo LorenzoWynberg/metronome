@@ -1,6 +1,6 @@
 import type { BeatEvent } from '../audio/beatQueue';
 import type { Engine } from '../audio/engine';
-import { getMeter, type AccentLevel } from '../state/meter';
+import { getMeter, TIME_SIGNATURES, type AccentLevel } from '../state/meter';
 import type { Store } from '../state/store';
 
 type Deps = {
@@ -10,7 +10,7 @@ type Deps = {
 
 /** Accent levels for a bar of `beatsPerBar` beats, when a known meter has it. */
 function levelsFor(beatsPerBar: number): AccentLevel[] | null {
-  const candidates = (['2/4', '3/4', '4/4', '6/8'] as const).map(getMeter);
+  const candidates = TIME_SIGNATURES.map(getMeter);
   const match = candidates.find((m) => m.beatsPerBar === beatsPerBar);
   return match ? [...match.accents] : null;
 }

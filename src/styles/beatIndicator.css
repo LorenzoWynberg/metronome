@@ -50,7 +50,7 @@
 
 @keyframes beat-flash {
   from {
-    background: var(--accent);
+    background: var(--elevated);
   }
   to {
     background: var(--surface);
