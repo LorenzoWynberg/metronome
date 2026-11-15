@@ -191,6 +191,51 @@ describe('engine', () => {
     expect(second.oscillators).toHaveLength(1);
   });
 
+  it('closes the context when the tick source throws and makes a fresh one on retry', async () => {
+    const store = createStore();
+    const first = new FakeAudioContext('running');
+    const second = new FakeAudioContext('running');
+    const contexts = [first, second];
+    const closed: FakeAudioContext[] = [];
+    for (const c of contexts) {
+      Object.assign(c, {
+        close: () => {
+          closed.push(c);
+          return Promise.resolve();
+        },
+        removeEventListener: () => undefined,
+      });
+    }
+    let calls = 0;
+    const createContext = vi.fn(() => contexts.shift()!.asAudioContext());
+    const engine = createEngine(store, {
+      createContext,
+      createTickSource: () => {
+        if (calls++ === 0) throw new Error('worker blocked');
+        return new ManualTickSource();
+      },
+    });
+    await expect(engine.start()).rejects.toThrow(/worker blocked/);
+    expect(closed).toEqual([first]);
+    expect(store.getState().running).toBe(false);
+
+    await engine.start();
+    expect(createContext).toHaveBeenCalledTimes(2);
+    expect(closed).toEqual([first]);
+    expect(store.getState().running).toBe(true);
+  });
+
+  it('stop() still clears the queue and sets running false when the tick source throws', async () => {
+    const { store, ticks, engine } = setup('running');
+    await engine.start();
+    ticks.stop = () => {
+      throw new Error('stop failed');
+    };
+    expect(() => engine.stop()).toThrow(/stop failed/);
+    expect(store.getState().running).toBe(false);
+    expect(engine.beatQueue.takeDue(Infinity)).toEqual([]);
+  });
+
   it('stops when the tick source fails during playback', async () => {
     const { store, ctx, ticks, engine } = setup();
     await engine.start();
