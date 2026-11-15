@@ -91,6 +91,22 @@ describe('tempo', () => {
     expect(n.value).toBe('240');
   });
 
+  it('Enter followed by blur announces the tempo once', () => {
+    const n = q<HTMLInputElement>('#bpm-number');
+    const status = q('[role=status]');
+    n.focus();
+    n.value = '90';
+    n.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    expect(status.textContent).toBe('Tempo 90 BPM');
+    status.textContent = '';
+    n.blur();
+    expect(status.textContent).toBe('');
+    n.focus();
+    n.value = '100';
+    n.blur();
+    expect(status.textContent).toBe('Tempo 100 BPM');
+  });
+
   it('is not overwritten while focused; steppers adjust by one', () => {
     const n = q<HTMLInputElement>('#bpm-number');
     n.focus();
@@ -126,6 +142,18 @@ describe('transport', () => {
     store.setState({ running: true });
     store.setState({ running: false });
     expect(button('Start')).toBeTruthy();
+  });
+
+  it('a rejecting start leaves the button on Start and logs the cause', async () => {
+    const err = new Error('no audio');
+    engine.start.mockRejectedValueOnce(err);
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    button('Start').click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(spy).toHaveBeenCalledWith('Metronome could not start', err);
+    expect(button('Start').getAttribute('aria-pressed')).toBe('false');
+    expect(store.getState().running).toBe(false);
+    spy.mockRestore();
   });
 
   it('radios set the signature without touching the engine', () => {

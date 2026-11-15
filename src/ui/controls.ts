@@ -96,7 +96,9 @@ export function mountControls(el: HTMLElement, deps: ControlsDeps): () => void {
 
   el.replaceChildren(tempo, transport, fieldset, tapGroup, status);
 
+  let announced: number | undefined;
   const announce = (bpm: number): void => {
+    announced = bpm;
     status.textContent = `Tempo ${bpm} BPM`;
   };
 
@@ -118,12 +120,18 @@ export function mountControls(el: HTMLElement, deps: ControlsDeps): () => void {
     store.setState({ bpm: n });
     const bpm = store.getState().bpm;
     number.value = String(bpm);
-    announce(bpm);
+    // Enter then blur commits twice; announce the tempo once.
+    if (bpm !== announced) announce(bpm);
   };
 
   const toggleRunning = (): void => {
     if (store.getState().running) engine.stop();
-    else engine.start().catch(() => undefined);
+    else {
+      engine.start().catch((err: unknown) => {
+        // The store stays at running:false, so the button stays on Start.
+        console.error('Metronome could not start', err);
+      });
+    }
   };
 
   const doTap = (): void => {

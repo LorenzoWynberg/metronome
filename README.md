@@ -15,6 +15,8 @@ Gate: `pnpm test`, `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm bui
 
 ### Steady click in a hidden tab
 
+**Status:** Outstanding: the 60 s hidden-tab check has not been run in Chrome, Firefox, Safari or iOS Safari, so the assumption that a Worker-hosted tick is not throttled in background tabs is unverified.
+
 The scheduler is ticked from a Web Worker on the assumption that browsers do not throttle a worker's timers when the tab is hidden. That assumption is not proven by the unit tests, so check it by hand in current **Chrome**, **Firefox** and **Safari**, including **iOS Safari**:
 
 1. Open the app and start the metronome at **120 BPM**.

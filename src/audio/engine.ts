@@ -48,22 +48,31 @@ export function createEngine(store: Store, deps: EngineDeps = {}): Engine {
     // A closed context can never run again, so the next start gets a new one.
     if (audio && audio.ctx.state !== 'closed') return audio;
     const ctx = createContext();
-    ctx.addEventListener('statechange', () => {
+    const onStateChange = (): void => {
       // Suspended, interrupted (iOS) or closed: show the app as stopped.
       if (playing && ctx.state !== 'running') stop();
-    });
-    const tickSource = createTickSource();
-    // A worker that fails to load or crashes sends no more ticks: stop
-    // rather than show the app as running in silence.
-    tickSource.onError(() => {
-      if (playing) stop();
-    });
-    const scheduler = createScheduler({
-      ctx,
-      store,
-      tickSource,
-      queue: beatQueue,
-    });
+    };
+    ctx.addEventListener('statechange', onStateChange);
+    let scheduler: Scheduler;
+    try {
+      const tickSource = createTickSource();
+      // A worker that fails to load or crashes sends no more ticks: stop
+      // rather than show the app as running in silence.
+      tickSource.onError(() => {
+        if (playing) stop();
+      });
+      scheduler = createScheduler({
+        ctx,
+        store,
+        tickSource,
+        queue: beatQueue,
+      });
+    } catch (err) {
+      // Do not orphan the context: browsers cap how many may be live.
+      ctx.removeEventListener('statechange', onStateChange);
+      ctx.close().catch(() => undefined);
+      throw err;
+    }
     audio = { ctx, scheduler };
     return audio;
   }
@@ -99,9 +108,12 @@ export function createEngine(store: Store, deps: EngineDeps = {}): Engine {
     pending = undefined;
     if (!playing) return;
     playing = false;
-    audio?.scheduler.stop();
-    beatQueue.clear();
-    store.setState({ running: false });
+    try {
+      audio?.scheduler.stop();
+    } finally {
+      beatQueue.clear();
+      store.setState({ running: false });
+    }
   }
 
   store.subscribe((state) => {
