@@ -9,16 +9,8 @@ main {
   padding: var(--spacing-6) var(--spacing-4);
 }
 
-#bpm-hero {
-  min-height: calc(var(--spacing) * 40);
-}
-
 #beat-indicator {
   min-height: calc(var(--spacing) * 12);
-}
-
-#controls {
-  min-height: calc(var(--spacing) * 24);
 }
 
 #bpm-hero,

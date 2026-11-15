@@ -1,0 +1,133 @@
+#bpm-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--spacing-6) var(--spacing-4);
+}
+
+.hero-value {
+  font-family: var(--font-mono);
+  font-size: calc(var(--text-4xl) * 3);
+  line-height: var(--leading-tight);
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
+}
+
+.hero-unit {
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+#controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+  padding: var(--spacing-4);
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  min-width: 0;
+  border: 0;
+  padding: 0;
+}
+
+.control-group.transport {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--spacing-3);
+}
+
+.tempo-row {
+  display: flex;
+  gap: var(--spacing-2);
+  min-width: 0;
+}
+
+fieldset.control-group {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+}
+
+legend {
+  padding: 0;
+  margin-bottom: var(--spacing-2);
+}
+
+input[type='range'] {
+  width: 100%;
+  min-height: calc(var(--spacing) * 11);
+  accent-color: var(--primary);
+}
+
+input[type='number'] {
+  flex: 1;
+  min-width: 0;
+  min-height: calc(var(--spacing) * 11);
+  padding-inline: var(--spacing-3);
+  font: inherit;
+  text-align: center;
+  background: var(--elevated);
+  color: var(--foreground);
+  border: 1px solid var(--muted);
+  border-radius: var(--radius-md);
+}
+
+button {
+  min-width: calc(var(--spacing) * 11);
+  min-height: calc(var(--spacing) * 11);
+  padding-inline: var(--spacing-4);
+  font: inherit;
+  background: var(--elevated);
+  color: var(--foreground);
+  border: 1px solid var(--muted);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+button.primary-button {
+  flex: 1;
+  background: var(--primary);
+  color: var(--on-primary);
+  border-color: var(--primary);
+}
+
+.radio-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  min-height: calc(var(--spacing) * 11);
+  min-width: calc(var(--spacing) * 11);
+  padding-inline: var(--spacing-3);
+  background: var(--elevated);
+  border: 1px solid var(--muted);
+  border-radius: var(--radius-md);
+}
+
+input[type='radio'] {
+  accent-color: var(--primary);
+}
+
+kbd {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--muted);
+  padding: var(--spacing-1) var(--spacing-2);
+  border: 1px solid var(--muted);
+  border-radius: var(--radius-sm);
+}
+
+@media (min-width: 768px) {
+  #controls {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+
+  .control-group:first-child {
+    flex: 1 1 100%;
+  }
+}
