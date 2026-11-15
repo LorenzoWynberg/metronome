@@ -34,8 +34,11 @@ export function createWorkerTickSource(): TickSource {
         worker.onmessage = (event: MessageEvent<SchedulerWorkerMessage>) => {
           if (event.data.type === 'tick') listener?.();
         };
-        // The script failed to load or threw: no more ticks will come.
+        // The script failed to load or threw: no more ticks will come from
+        // this worker, so drop it and let the next `start` make a fresh one.
         worker.onerror = (event: ErrorEvent) => {
+          worker?.terminate();
+          worker = undefined;
           errorListener?.(event);
         };
       }

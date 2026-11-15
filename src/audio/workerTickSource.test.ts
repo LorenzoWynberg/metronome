@@ -10,8 +10,12 @@ class FakeWorker {
   constructor() {
     FakeWorker.instances.push(this);
   }
+  terminated = false;
   postMessage(message: SchedulerWorkerRequest): void {
     this.posted.push(message);
+  }
+  terminate(): void {
+    this.terminated = true;
   }
 }
 
@@ -48,11 +52,19 @@ describe('worker tick source', () => {
     expect(onTick).toHaveBeenCalledTimes(1);
   });
 
-  it('reports a worker error to its error listener', () => {
+  it('reports a worker error and replaces the dead worker on the next start', () => {
     const { source, onError } = setup();
     source.start(25);
+    const failed = FakeWorker.instances[0]!;
     const failure = { message: 'failed to load' };
-    FakeWorker.instances[0]!.onerror?.(failure);
+    failed.onerror?.(failure);
+
     expect(onError).toHaveBeenCalledWith(failure);
+    expect(failed.terminated).toBe(true);
+    source.start(25);
+    expect(FakeWorker.instances).toHaveLength(2);
+    expect(FakeWorker.instances[1]!.posted).toEqual([
+      { type: 'start', intervalMs: 25 },
+    ]);
   });
 });
