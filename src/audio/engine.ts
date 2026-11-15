@@ -45,16 +45,23 @@ export function createEngine(store: Store, deps: EngineDeps = {}): Engine {
   let generation = 0;
 
   function ensureAudio(): { ctx: AudioContext; scheduler: Scheduler } {
-    if (audio) return audio;
+    // A closed context can never run again, so the next start gets a new one.
+    if (audio && audio.ctx.state !== 'closed') return audio;
     const ctx = createContext();
     ctx.addEventListener('statechange', () => {
       // Suspended, interrupted (iOS) or closed: show the app as stopped.
       if (playing && ctx.state !== 'running') stop();
     });
+    const tickSource = createTickSource();
+    // A worker that fails to load or crashes sends no more ticks: stop
+    // rather than show the app as running in silence.
+    tickSource.onError(() => {
+      if (playing) stop();
+    });
     const scheduler = createScheduler({
       ctx,
       store,
-      tickSource: createTickSource(),
+      tickSource,
       queue: beatQueue,
     });
     audio = { ctx, scheduler };
@@ -65,8 +72,12 @@ export function createEngine(store: Store, deps: EngineDeps = {}): Engine {
     // Everything up to the first `await` runs inside the caller's gesture.
     preferPlaybackAudioSession();
     const { ctx, scheduler } = ensureAudio();
-    if (ctx.state === 'suspended') await ctx.resume();
+    // Suspended, or interrupted on iOS: both recover through `resume()`.
+    if (ctx.state !== 'running') await ctx.resume();
     if (token !== generation) return;
+    if (ctx.state !== 'running') {
+      throw new Error(`AudioContext did not start (state: ${ctx.state})`);
+    }
     scheduler.start();
     playing = true;
     store.setState({ running: true });

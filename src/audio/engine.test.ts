@@ -4,7 +4,9 @@ import { createEngine } from './engine';
 import type { SchedulerWorkerRequest } from './scheduler.worker';
 import { FakeAudioContext, ManualTickSource, runFor } from './testing';
 
-function setup(initialState: 'suspended' | 'running' = 'suspended') {
+function setup(
+  initialState: ConstructorParameters<typeof FakeAudioContext>[0] = 'suspended',
+) {
   const store = createStore();
   const ctx = new FakeAudioContext(initialState);
   const ticks = new ManualTickSource();
@@ -137,6 +139,68 @@ describe('engine', () => {
     expect(createContext).toHaveBeenCalledTimes(1);
     expect(ticks.running).toBe(true);
     expect(ctx.startTimes().at(-1)).toBeCloseTo(5.05, 9);
+  });
+
+  it('can start again after the tick source failed to start', async () => {
+    const { store, ticks, engine } = setup();
+    const startTicks = ticks.start.bind(ticks);
+    ticks.start = () => {
+      throw new Error('worker blocked');
+    };
+    await expect(engine.start()).rejects.toThrow('worker blocked');
+    expect(store.getState().running).toBe(false);
+
+    ticks.start = startTicks;
+    await engine.start();
+    expect(ticks.running).toBe(true);
+    expect(store.getState().running).toBe(true);
+  });
+
+  it('resumes an interrupted context before playing', async () => {
+    const { store, ctx, engine } = setup('interrupted');
+    await engine.start();
+    expect(ctx.resumeCalls).toBe(1);
+    expect(store.getState().running).toBe(true);
+  });
+
+  it('rejects, and leaves running false, when the context does not start', async () => {
+    const { store, ctx, ticks, engine } = setup('interrupted');
+    ctx.resume = async () => {
+      ctx.resumeCalls++; // iOS keeps the context interrupted
+    };
+    await expect(engine.start()).rejects.toThrow(/interrupted/);
+    expect(ticks.running).toBe(false);
+    expect(store.getState().running).toBe(false);
+  });
+
+  it('replaces a closed context on the next start()', async () => {
+    const store = createStore();
+    const first = new FakeAudioContext('running');
+    const second = new FakeAudioContext('running');
+    const contexts = [first, second];
+    const engine = createEngine(store, {
+      createContext: () => contexts.shift()!.asAudioContext(),
+      createTickSource: () => new ManualTickSource(),
+    });
+    await engine.start();
+    first.changeState('closed');
+    expect(store.getState().running).toBe(false);
+
+    await engine.start();
+    expect(store.getState().running).toBe(true);
+    expect(second.oscillators).toHaveLength(1);
+  });
+
+  it('stops when the tick source fails during playback', async () => {
+    const { store, ctx, ticks, engine } = setup();
+    await engine.start();
+    ticks.fail();
+
+    expect(ticks.running).toBe(false);
+    expect(store.getState().running).toBe(false);
+    expect(engine.beatQueue.takeDue(Infinity)).toEqual([]);
+    runFor(ctx, ticks, 1);
+    expect(ctx.oscillators).toHaveLength(1);
   });
 });
 

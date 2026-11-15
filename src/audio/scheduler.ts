@@ -17,6 +17,8 @@ export interface TickSource {
   start(intervalMs: number): void;
   stop(): void;
   onTick(cb: () => void): void;
+  /** Called when the source fails and will deliver no more ticks. */
+  onError(cb: (error: unknown) => void): void;
 }
 
 export interface Scheduler {
@@ -99,8 +101,15 @@ export function createScheduler({
       lastBeatTime = undefined;
       beat = 0;
       timeSignature = undefined;
-      tickSource.start(TICK_MS);
-      tick();
+      try {
+        tickSource.start(TICK_MS);
+        tick();
+      } catch (error) {
+        // Leave nothing half-started, so a later `start()` can try again.
+        active = false;
+        tickSource.stop();
+        throw error;
+      }
     },
     stop() {
       if (!active) return;

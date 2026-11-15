@@ -11,6 +11,7 @@ import type {
 export function createWorkerTickSource(): TickSource {
   let worker: Worker | undefined;
   let listener: (() => void) | undefined;
+  let errorListener: ((error: unknown) => void) | undefined;
 
   function post(request: SchedulerWorkerRequest): void {
     worker?.postMessage(request);
@@ -19,6 +20,9 @@ export function createWorkerTickSource(): TickSource {
   return {
     onTick(cb) {
       listener = cb;
+    },
+    onError(cb) {
+      errorListener = cb;
     },
     start(intervalMs) {
       if (!worker) {
@@ -29,6 +33,10 @@ export function createWorkerTickSource(): TickSource {
         });
         worker.onmessage = (event: MessageEvent<SchedulerWorkerMessage>) => {
           if (event.data.type === 'tick') listener?.();
+        };
+        // The script failed to load or threw: no more ticks will come.
+        worker.onerror = (event: ErrorEvent) => {
+          errorListener?.(event);
         };
       }
       post({ type: 'start', intervalMs });

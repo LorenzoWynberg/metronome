@@ -116,6 +116,7 @@ export class ManualTickSource implements TickSource {
   stopCalls = 0;
   onTickCalls = 0;
   private cb: (() => void) | undefined;
+  private errorCb: ((error: unknown) => void) | undefined;
 
   start(intervalMs: number): void {
     this.running = true;
@@ -129,6 +130,13 @@ export class ManualTickSource implements TickSource {
   onTick(cb: () => void): void {
     this.cb = cb;
     this.onTickCalls++;
+  }
+  onError(cb: (error: unknown) => void): void {
+    this.errorCb = cb;
+  }
+  /** Reports a failure, as a worker that failed to load would. */
+  fail(error: unknown = new Error('tick source failed')): void {
+    this.errorCb?.(error);
   }
   /** Delivers one tick, whether or not the source is started. */
   fire(): void {

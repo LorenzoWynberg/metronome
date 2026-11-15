@@ -195,6 +195,23 @@ describe('scheduler', () => {
     expect(ctx.oscillators).toHaveLength(3);
   });
 
+  it('a start() whose tick source throws leaves the scheduler stopped and restartable', () => {
+    const { ctx, ticks, scheduler } = setup({ bpm: 120 });
+    const startTicks = ticks.start.bind(ticks);
+    ticks.start = () => {
+      throw new Error('worker blocked');
+    };
+    expect(() => scheduler.start()).toThrow('worker blocked');
+    expect(ticks.stopCalls).toBe(1);
+    ticks.fire();
+    expect(ctx.oscillators).toHaveLength(0);
+
+    ticks.start = startTicks;
+    scheduler.start();
+    expect(ticks.running).toBe(true);
+    expect(ctx.oscillators).toHaveLength(1);
+  });
+
   it('a restart after stop begins a fresh bar at currentTime + 0.05', () => {
     const { ctx, ticks, scheduler, events, drain } = setup({ bpm: 120 });
     scheduler.start();
