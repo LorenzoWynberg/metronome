@@ -1,0 +1,71 @@
+#beat-indicator {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.beat-cell {
+  flex: none;
+  box-sizing: border-box;
+  background: transparent;
+  border: 2px solid var(--muted);
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+
+.beat-cell.level-strong {
+  width: calc(var(--spacing) * 10);
+  height: calc(var(--spacing) * 10);
+  border-radius: var(--radius-sm);
+}
+
+.beat-cell.level-medium {
+  width: calc(var(--spacing) * 8);
+  height: calc(var(--spacing) * 8);
+  border-radius: 50%;
+}
+
+.beat-cell.level-normal {
+  width: calc(var(--spacing) * 6);
+  height: calc(var(--spacing) * 6);
+  border-radius: 50%;
+}
+
+.beat-cell.is-lit {
+  background: var(--accent);
+  border-color: var(--accent);
+  transform: scale(1.1);
+}
+
+#beat-indicator[data-flash='on'] {
+  border-color: var(--accent);
+  animation: beat-flash var(--duration-slow) var(--ease-exit) 1;
+}
+
+@keyframes beat-flash {
+  from {
+    background: var(--elevated);
+  }
+  to {
+    background: var(--surface);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .beat-cell,
+  #beat-indicator[data-flash='on'] {
+    transition: none;
+    animation: none;
+    transform: none;
+  }
+
+  .beat-cell.is-lit {
+    transform: none;
+  }
+}
