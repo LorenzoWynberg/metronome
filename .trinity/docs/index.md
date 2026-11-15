@@ -17,6 +17,7 @@ A small browser metronome built with Vite and vanilla TypeScript, served under `
 - [Styling rule](rules/styling.md)
 - [App shell](tech-guide/app/shell.md)
 - [Controls panel](tech-guide/app/controls.md)
+- [Beat indicator](tech-guide/app/beat-indicator.md)
 - [GitHub Pages deploy](tech-guide/deploy/pages.md)
 - [State contracts](tech-guide/state/store.md)
 - [Audio engine](tech-guide/audio/engine.md)
