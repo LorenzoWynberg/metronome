@@ -18,3 +18,4 @@ A small browser metronome built with Vite and vanilla TypeScript, served under `
 - [App shell](tech-guide/app/shell.md)
 - [GitHub Pages deploy](tech-guide/deploy/pages.md)
 - [State contracts](tech-guide/state/store.md)
+- [Audio engine](tech-guide/audio/engine.md)
