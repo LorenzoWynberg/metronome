@@ -1,5 +1,6 @@
 import type { Engine } from '../audio/engine';
 import { TIME_SIGNATURES } from '../state/meter';
+import { activePreset, TEMPO_PRESETS } from '../state/presets';
 import type { Store } from '../state/store';
 import { createTapTempo, type TapTempo } from '../state/tapTempo';
 import { MAX_BPM, MIN_BPM } from '../state/tempo';
@@ -59,6 +60,25 @@ export function mountControls(el: HTMLElement, deps: ControlsDeps): () => void {
   tempo.className = 'control-group';
   tempo.append(sliderLabel, slider, numberLabel, tempoRow);
 
+  // Tempo presets
+  const presetRow = make('div');
+  presetRow.className = 'control-group preset-row';
+  presetRow.setAttribute('role', 'group');
+  presetRow.setAttribute('aria-label', 'Tempo presets');
+  const presetButtons = TEMPO_PRESETS.map((preset) => {
+    const btn = make('button', { type: 'button' });
+    btn.setAttribute('aria-label', `${preset.name} ${preset.bpm} BPM`);
+    btn.append(
+      make('span', { className: 'preset-name', textContent: preset.name }),
+      make('span', {
+        className: 'preset-bpm',
+        textContent: String(preset.bpm),
+      }),
+    );
+    presetRow.append(btn);
+    return { preset, btn };
+  });
+
   // Start / Stop
   const toggle = make('button', { type: 'button' });
   toggle.className = 'primary-button';
@@ -110,6 +130,7 @@ export function mountControls(el: HTMLElement, deps: ControlsDeps): () => void {
 
   el.replaceChildren(
     tempo,
+    presetRow,
     transport,
     fieldset,
     tapGroup,
@@ -131,6 +152,10 @@ export function mountControls(el: HTMLElement, deps: ControlsDeps): () => void {
     toggle.setAttribute('aria-pressed', String(running));
     if (running) clearError();
     for (const r of radios) r.checked = r.value === timeSignature;
+    const current = activePreset(bpm);
+    for (const { preset, btn } of presetButtons) {
+      btn.setAttribute('aria-pressed', String(preset === current));
+    }
   };
 
   const commitNumber = (): void => {
@@ -184,6 +209,12 @@ export function mountControls(el: HTMLElement, deps: ControlsDeps): () => void {
   plus.addEventListener('click', () => step(1));
   toggle.addEventListener('click', toggleRunning);
   tapButton.addEventListener('click', doTap);
+  for (const { preset, btn } of presetButtons) {
+    btn.addEventListener('click', () => {
+      store.setState({ bpm: preset.bpm });
+      announce(store.getState().bpm);
+    });
+  }
   for (const r of radios) {
     r.addEventListener('change', () => {
       if (r.checked) {

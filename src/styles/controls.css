@@ -34,6 +34,24 @@
   padding: 0;
 }
 
+.preset-row {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+}
+
+.preset-row button {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.preset-row button[aria-pressed='true'] {
+  background: var(--primary);
+  color: var(--on-primary);
+  border-color: var(--primary);
+}
+
 .control-group.transport {
   flex-direction: row;
   align-items: center;
