@@ -367,6 +367,23 @@ describe('presets', () => {
     expect(pressed()).toEqual(Array(6).fill('false'));
   });
 
+  it('pressed state follows the number input, − stepper and tap tempo', () => {
+    const n = q<HTMLInputElement>('#bpm-number');
+    n.value = '110';
+    n.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(pressed()[3]).toBe('true');
+    expect(pressed().filter((p) => p === 'true')).toHaveLength(1);
+    button('−').click();
+    expect(pressed()).toEqual(Array(6).fill('false'));
+    now = 1000;
+    button('Tap').click();
+    now = 2200;
+    button('Tap').click();
+    expect(store.getState().bpm).toBe(50);
+    expect(pressed()[0]).toBe('true');
+    expect(pressed().filter((p) => p === 'true')).toHaveLength(1);
+  });
+
   it('shows a persisted preset pressed without a click', () => {
     const storage = {
       getItem: () => '{"bpm":130,"timeSignature":"4/4"}',
