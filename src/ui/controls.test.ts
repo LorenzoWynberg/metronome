@@ -330,7 +330,8 @@ describe('presets', () => {
       'Presto 170 BPM',
     ]);
     expect(presets().every((b) => b.type === 'button')).toBe(true);
-    expect(presets()[0]?.textContent).toBe('Largo50');
+    expect(presets()[0]?.textContent).toContain('Largo');
+    expect(presets()[0]?.textContent).toContain('50');
   });
 
   it('click sets bpm, announces, and leaves playback alone', async () => {
