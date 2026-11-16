@@ -41,6 +41,17 @@ const key = (k: string, init: KeyboardEventInit = {}): KeyboardEvent => {
   return e;
 };
 
+const keyup = (k: string, init: KeyboardEventInit = {}): KeyboardEvent => {
+  const e = new KeyboardEvent('keyup', {
+    key: k,
+    bubbles: true,
+    cancelable: true,
+    ...init,
+  });
+  (document.activeElement ?? document.body).dispatchEvent(e);
+  return e;
+};
+
 beforeEach(() => {
   store = createStore();
   engine = {
@@ -308,5 +319,117 @@ describe('audio failures', () => {
     dispose();
     expect(offError).toHaveBeenCalledOnce();
     dispose = () => undefined;
+  });
+});
+
+describe('arrow keys', () => {
+  const status = (): string =>
+    q<HTMLElement>('[role=status]').textContent ?? '';
+  const focusEl = (el: HTMLElement): void => {
+    root.append(el);
+    el.focus();
+  };
+
+  it('step by 1, or 5 with Shift, and announce once on release', () => {
+    const up = key('ArrowUp');
+    expect(up.defaultPrevented).toBe(true);
+    key('ArrowUp', { repeat: true });
+    key('ArrowDown', { shiftKey: true });
+    expect(store.getState().bpm).toBe(120 + 1 + 1 - 5);
+    expect(status()).toBe('');
+    keyup('ArrowDown');
+    expect(status()).toBe('Tempo 117 BPM');
+  });
+
+  it('clamps at the bounds and stays silent when nothing changed', () => {
+    store.setState({ bpm: 238 });
+    key('ArrowUp', { shiftKey: true });
+    expect(store.getState().bpm).toBe(240);
+    keyup('ArrowUp');
+    expect(status()).toBe('Tempo 240 BPM');
+    q<HTMLElement>('[role=status]').textContent = '';
+    const e = key('ArrowUp');
+    expect(e.defaultPrevented).toBe(true);
+    keyup('ArrowUp');
+    expect(status()).toBe('');
+    store.setState({ bpm: 40 });
+    key('ArrowDown');
+    keyup('ArrowDown');
+    expect(status()).toBe('');
+  });
+
+  it('leaves the slider and radios to the browser', () => {
+    const before = store.getState().bpm;
+    for (const el of [q('#bpm-slider'), q('input[type=radio]')]) {
+      (el as HTMLElement).focus();
+      const e = key('ArrowUp');
+      expect(e.defaultPrevented).toBe(false);
+    }
+    expect(store.getState().bpm).toBe(before);
+  });
+
+  it('ignores Ctrl, Meta and Alt', () => {
+    for (const m of ['ctrlKey', 'metaKey', 'altKey']) {
+      key('ArrowUp', { [m]: true });
+    }
+    expect(store.getState().bpm).toBe(120);
+  });
+
+  it.each([
+    ['number', () => q<HTMLElement>('#bpm-number')],
+    [
+      'text',
+      () => Object.assign(document.createElement('input'), { type: 'text' }),
+    ],
+    ['textarea', () => document.createElement('textarea')],
+    ['select', () => document.createElement('select')],
+    [
+      'contenteditable',
+      () => {
+        const d = document.createElement('div');
+        d.setAttribute('contenteditable', 'true');
+        d.tabIndex = 0;
+        return d;
+      },
+    ],
+  ])('does nothing while a %s field has focus', (_n, make) => {
+    focusEl(make());
+    const up = key('ArrowUp');
+    const sp = key(' ');
+    key('t');
+    expect(up.defaultPrevented).toBe(false);
+    expect(sp.defaultPrevented).toBe(false);
+    expect(store.getState().bpm).toBe(120);
+    expect(store.getState().running).toBe(false);
+  });
+
+  it('Space and T still work on body, slider and radio', () => {
+    for (const el of [
+      document.body,
+      q('#bpm-slider'),
+      q('input[type=radio]'),
+    ]) {
+      (el as HTMLElement).focus?.();
+      const before = engine.start.mock.calls.length;
+      expect(key(' ').defaultPrevented).toBe(true);
+      expect(engine.start.mock.calls.length).toBe(before + 1);
+      key(' ');
+      store.setState({ bpm: 120 });
+      now += 100000;
+      key('t');
+      now += 600;
+      key('t');
+      expect(store.getState().bpm).toBe(100);
+    }
+  });
+
+  it('labels the arrow hints and keeps Space and T', () => {
+    const kbds = [...root.querySelectorAll('kbd')];
+    const names = kbds.map((k) => k.textContent);
+    expect(names).toContain('Space');
+    expect(names).toContain('T');
+    expect(names).toContain('↑Up arrow');
+    expect(names).toContain('↓Down arrow');
+    expect(root.querySelectorAll('kbd [aria-hidden=true]').length).toBe(2);
   });
 });

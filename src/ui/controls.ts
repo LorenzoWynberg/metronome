@@ -21,7 +21,16 @@ export function mountControls(el: HTMLElement, deps: ControlsDeps): () => void {
     props: Partial<HTMLElementTagNameMap[K]> = {},
   ): HTMLElementTagNameMap[K] =>
     Object.assign(doc.createElement(tag), props) as HTMLElementTagNameMap[K];
-  const hint = (key: string): HTMLElement => make('kbd', { textContent: key });
+  const hint = (key: string, name?: string): HTMLElement => {
+    if (name === undefined) return make('kbd', { textContent: key });
+    const kbd = make('kbd');
+    const glyph = make('span', { textContent: key });
+    glyph.setAttribute('aria-hidden', 'true');
+    const text = make('span', { textContent: name });
+    text.className = 'visually-hidden';
+    kbd.append(glyph, text);
+    return kbd;
+  };
 
   // Tempo
   const slider = make('input', {
@@ -57,7 +66,14 @@ export function mountControls(el: HTMLElement, deps: ControlsDeps): () => void {
   tempoRow.append(minus, number, plus);
   const tempo = make('div');
   tempo.className = 'control-group';
-  tempo.append(sliderLabel, slider, numberLabel, tempoRow);
+  tempo.append(
+    sliderLabel,
+    slider,
+    numberLabel,
+    tempoRow,
+    hint('↑', 'Up arrow'),
+    hint('↓', 'Down arrow'),
+  );
 
   // Start / Stop
   const toggle = make('button', { type: 'button' });
@@ -194,11 +210,52 @@ export function mountControls(el: HTMLElement, deps: ControlsDeps): () => void {
     });
   }
 
+  const NON_TEXT_INPUTS = new Set([
+    'range',
+    'radio',
+    'checkbox',
+    'button',
+    'submit',
+    'reset',
+    'image',
+    'color',
+    'file',
+    'hidden',
+  ]);
+  const isEditable = (node: Element | null): boolean => {
+    if (!node) return false;
+    const tag = node.tagName.toLowerCase();
+    if (tag === 'textarea' || tag === 'select') return true;
+    if (tag === 'input') {
+      return !NON_TEXT_INPUTS.has((node as HTMLInputElement).type);
+    }
+    if ((node as HTMLElement).isContentEditable) return true;
+    const ce = node.getAttribute('contenteditable');
+    return ce === '' || ce === 'true' || ce === 'plaintext-only';
+  };
   const ignore = (e: KeyboardEvent): boolean =>
-    e.ctrlKey || e.metaKey || e.altKey || doc.activeElement === number;
+    e.ctrlKey || e.metaKey || e.altKey || isEditable(doc.activeElement);
+  // Slider and radios use the arrow keys themselves.
+  const ownsArrows = (): boolean => {
+    const a = doc.activeElement;
+    return (
+      a === slider || (a !== null && a.matches('input[name="time-signature"]'))
+    );
+  };
+  const arrowDelta = (e: KeyboardEvent): number => {
+    const size = e.shiftKey ? 5 : 1;
+    return e.key === 'ArrowUp' ? size : -size;
+  };
+  let arrowStartBpm: number | undefined;
   const onKeydown = (e: KeyboardEvent): void => {
     if (ignore(e)) return;
-    if (e.key === ' ') {
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      if (ownsArrows()) return;
+      e.preventDefault();
+      const current = store.getState().bpm;
+      if (!e.repeat || arrowStartBpm === undefined) arrowStartBpm = current;
+      store.setState({ bpm: current + arrowDelta(e) });
+    } else if (e.key === ' ') {
       e.preventDefault();
       if (!e.repeat) toggleRunning();
     } else if ((e.key === 't' || e.key === 'T') && !e.repeat) {
@@ -206,8 +263,16 @@ export function mountControls(el: HTMLElement, deps: ControlsDeps): () => void {
     }
   };
   // A focused button or radio would otherwise activate again on Space keyup.
+  // Arrow releases end a burst: announce the tempo once.
   const onKeyup = (e: KeyboardEvent): void => {
-    if (e.key === ' ' && !ignore(e)) e.preventDefault();
+    if (ignore(e)) return;
+    if (e.key === ' ') e.preventDefault();
+    else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      if (ownsArrows() || arrowStartBpm === undefined) return;
+      const bpm = store.getState().bpm;
+      if (bpm !== arrowStartBpm) announce(bpm);
+      arrowStartBpm = undefined;
+    }
   };
   doc.addEventListener('keydown', onKeydown);
   doc.addEventListener('keyup', onKeyup);
