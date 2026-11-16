@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0 - 2026-11-15
+
+### New: Tempo presets
+
+A new row of six preset buttons sits right below the tempo slider: **Largo 50**, **Adagio 70**, **Andante 90**, **Moderato 110**, **Allegro 130** and **Presto 170**. Click one to jump straight to that tempo instead of dragging the slider or typing a number. If the metronome is already playing, it keeps playing at the new tempo. If it's stopped, it stays stopped.
+
+The button for the current tempo stays highlighted, so you can see which marking you're on. The highlight follows the tempo however you set it: with the slider, the number field, the + and − steppers, tap tempo or a preset button. When the tempo doesn't exactly match a marking, such as 120 BPM, no button is highlighted. Your tempo is already saved between sessions, so after a reload the correct button lights up again.
+
+The presets also work with assistive technology. They form a labelled "Tempo presets" group, each button's name includes both the marking and its BPM, and screen readers announce the new tempo when you pick one. On narrow screens the row wraps onto more lines instead of making the page scroll sideways, and every button stays large enough to tap easily.
+
 ## 0.1.0 - 2026-11-15
 
 ### New

@@ -433,3 +433,95 @@ describe('arrow keys', () => {
     expect(root.querySelectorAll('kbd [aria-hidden=true]').length).toBe(2);
   });
 });
+
+describe('presets', () => {
+  const presets = (): HTMLButtonElement[] => [
+    ...root.querySelectorAll<HTMLButtonElement>('.preset-row button'),
+  ];
+  const pressed = (): string[] =>
+    presets().map((b) => b.getAttribute('aria-pressed') ?? '');
+
+  it('renders a named group of six buttons in order', () => {
+    const group = q('[role=group]');
+    expect(group.getAttribute('aria-label')).toBe('Tempo presets');
+    expect(presets().map((b) => b.getAttribute('aria-label'))).toEqual([
+      'Largo 50 BPM',
+      'Adagio 70 BPM',
+      'Andante 90 BPM',
+      'Moderato 110 BPM',
+      'Allegro 130 BPM',
+      'Presto 170 BPM',
+    ]);
+    expect(presets().every((b) => b.type === 'button')).toBe(true);
+    expect(presets()[0]?.textContent).toContain('Largo');
+    expect(presets()[0]?.textContent).toContain('50');
+  });
+
+  it('click sets bpm, announces, and leaves playback alone', async () => {
+    for (const running of [false, true]) {
+      store.setState({ running });
+      presets().forEach((b, i) => {
+        b.click();
+        const bpm = [50, 70, 90, 110, 130, 170][i];
+        expect(store.getState().bpm).toBe(bpm);
+        expect(q('[role=status]').textContent).toBe(`Tempo ${bpm} BPM`);
+      });
+    }
+    expect(engine.start).not.toHaveBeenCalled();
+    expect(engine.stop).not.toHaveBeenCalled();
+  });
+
+  it('pressed state follows the tempo from any source', () => {
+    expect(pressed()).toEqual(Array(6).fill('false'));
+    presets()[4]?.click();
+    expect(pressed()).toEqual([
+      'false',
+      'false',
+      'false',
+      'false',
+      'true',
+      'false',
+    ]);
+    const s = q<HTMLInputElement>('input[type=range]');
+    s.value = '90';
+    s.dispatchEvent(new Event('input'));
+    expect(pressed()[2]).toBe('true');
+    expect(pressed().filter((p) => p === 'true')).toHaveLength(1);
+    button('+').click();
+    expect(pressed()).toEqual(Array(6).fill('false'));
+  });
+
+  it('pressed state follows the number input, − stepper and tap tempo', () => {
+    const n = q<HTMLInputElement>('#bpm-number');
+    n.value = '110';
+    n.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(pressed()[3]).toBe('true');
+    expect(pressed().filter((p) => p === 'true')).toHaveLength(1);
+    button('−').click();
+    expect(pressed()).toEqual(Array(6).fill('false'));
+    now = 1000;
+    button('Tap').click();
+    now = 2200;
+    button('Tap').click();
+    expect(store.getState().bpm).toBe(50);
+    expect(pressed()[0]).toBe('true');
+    expect(pressed().filter((p) => p === 'true')).toHaveLength(1);
+  });
+
+  it('shows a persisted preset pressed without a click', () => {
+    const storage = {
+      getItem: () => '{"bpm":130,"timeSignature":"4/4"}',
+      setItem: () => undefined,
+    };
+    const el = document.createElement('div');
+    document.body.append(el);
+    const off = mountControls(el, {
+      store: createStore({ storage }),
+      engine,
+    });
+    const b = [...el.querySelectorAll('.preset-row button')];
+    expect(b[4]?.getAttribute('aria-pressed')).toBe('true');
+    off();
+    el.remove();
+  });
+});
