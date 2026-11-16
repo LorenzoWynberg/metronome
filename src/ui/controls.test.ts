@@ -410,9 +410,17 @@ describe('arrow keys', () => {
       q('input[type=radio]'),
     ]) {
       (el as HTMLElement).focus?.();
+      const before = engine.start.mock.calls.length;
       expect(key(' ').defaultPrevented).toBe(true);
+      expect(engine.start.mock.calls.length).toBe(before + 1);
+      key(' ');
+      store.setState({ bpm: 120 });
+      now += 100000;
+      key('t');
+      now += 600;
+      key('t');
+      expect(store.getState().bpm).toBe(100);
     }
-    expect(engine.start).toHaveBeenCalled();
   });
 
   it('labels the arrow hints and keeps Space and T', () => {
