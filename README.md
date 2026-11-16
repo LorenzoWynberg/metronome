@@ -1,6 +1,6 @@
 # metronome
 
-A small browser metronome: set the tempo and time signature, tap to set tempo, with an accented first beat.
+A small browser metronome: set the tempo and time signature, jump to a tempo preset (Largo to Presto), tap to set tempo, with an accented first beat.
 
 ## Development
 
