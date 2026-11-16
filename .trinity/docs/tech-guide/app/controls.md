@@ -15,7 +15,9 @@
 ## Shortcuts
 
 - Space toggles Start/Stop. It calls `preventDefault` on keydown and keyup so a focused button or radio does not activate twice.
-- `T` taps tempo. It ignores key repeat, Ctrl/Meta/Alt combinations and focus in the number input.
+- `T` taps tempo. It ignores key repeat and Ctrl/Meta/Alt combinations.
+- ArrowUp/ArrowDown nudge the BPM by 1, or 5 with Shift. Holding the key repeats the nudge. The tempo is announced once, on keyup, and only if it changed over the burst. The slider and time-signature radios keep the arrow keys for themselves, so the shortcut skips them. Two `<kbd>` hints (↑ ↓) in the tempo group carry visually hidden "Up arrow"/"Down arrow" names.
+- Every shortcut is ignored while focus is in an editable field: text-like inputs, textarea, select or contenteditable. Range, radio, checkbox and button inputs are not editable.
 - Listeners sit on the document and are removed by the cleanup function.
 
 ## Tap tempo
