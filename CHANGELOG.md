@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.3.0 - 2026-11-16
+
+### New: tempo shortcuts on the keyboard
+
+You can now change the tempo without touching the slider. Press **Up** or **Down** to move it by 1 BPM, or hold **Shift** to move it by 5 BPM. Hold the key down and the tempo keeps changing until you let go, so large changes take one press.
+
+| Keys                      | Change                   |
+| ------------------------- | ------------------------ |
+| Up / Down                 | ±1 BPM                   |
+| Shift + Up / Shift + Down | ±5 BPM                   |
+| Hold any of the above     | Keeps changing the tempo |
+
+### Improved: shortcuts no longer get in the way
+
+The tempo shortcuts turn off while you type in any text field, so arrow keys move the cursor there as usual. The tempo slider and the time-signature options also keep their normal arrow-key behaviour: when one of them has focus, the arrow keys control that control and not the global shortcut. Keyboard and screen-reader users keep everything that already worked and gain a quicker way to set the tempo.
+
 ## 0.2.0 - 2026-11-15
 
 ### New: Tempo presets
