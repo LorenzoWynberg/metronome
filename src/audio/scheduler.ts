@@ -33,6 +33,8 @@ export interface SchedulerDeps {
   store: Pick<Store, 'getState'>;
   tickSource: TickSource;
   queue: BeatQueue;
+  /** Where clicks are sent; defaults to the context's destination. */
+  output?: AudioNode;
   /** Called when a tick throws; the scheduler has already stopped itself. */
   onError?: (error: unknown) => void;
 }
@@ -48,6 +50,7 @@ export function createScheduler({
   store,
   tickSource,
   queue,
+  output,
   onError,
 }: SchedulerDeps): Scheduler {
   let active = false;
@@ -83,7 +86,7 @@ export function createScheduler({
       // `beat` is always below `beatsPerBar`; the fallback only satisfies the type.
       const level = meter.accents[beat] ?? 'normal';
 
-      scheduled.push({ node: scheduleClick(ctx, time, level), time });
+      scheduled.push({ node: scheduleClick(ctx, time, level, output), time });
       queue.push({
         beat,
         audioTime: time,

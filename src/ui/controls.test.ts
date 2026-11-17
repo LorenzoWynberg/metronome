@@ -85,6 +85,34 @@ afterEach(() => {
   root.remove();
 });
 
+describe('volume', () => {
+  it('has a labelled slider, readout and aria-valuetext', () => {
+    const v = q<HTMLInputElement>('#volume-slider');
+    expect(root.querySelector('label[for=volume-slider]')?.textContent).toBe(
+      'Volume',
+    );
+    expect([v.min, v.max, v.step, v.value]).toEqual(['0', '100', '1', '80']);
+    expect(v.getAttribute('aria-valuetext')).toBe('80%');
+    expect(q('.volume-readout').textContent).toBe('80%');
+  });
+
+  it('writes input to the store and repaints', () => {
+    const v = q<HTMLInputElement>('#volume-slider');
+    v.value = '30';
+    v.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(store.getState().volume).toBe(30);
+    expect(v.getAttribute('aria-valuetext')).toBe('30%');
+    expect(q('.volume-readout').textContent).toBe('30%');
+  });
+
+  it('leaves arrow keys to the slider', () => {
+    const before = store.getState().bpm;
+    q<HTMLElement>('#volume-slider').focus();
+    expect(key('ArrowUp').defaultPrevented).toBe(false);
+    expect(store.getState().bpm).toBe(before);
+  });
+});
+
 describe('tempo', () => {
   it('slider has attributes and writes live', () => {
     const s = q<HTMLInputElement>('input[type=range]');

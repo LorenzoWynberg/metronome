@@ -21,12 +21,14 @@ export const CLICK_LENGTH_S = 0.06;
 /**
  * Synthesizes one click at `time` (AudioContext clock): an oscillator through
  * a gain envelope with a fast attack and an exponential decay to near silence.
+ * The click feeds `output` (the context destination by default).
  * Returns the oscillator so a caller can cut a not-yet-sounded click short.
  */
 export function scheduleClick(
   ctx: BaseAudioContext,
   time: number,
   level: AccentLevel,
+  output: AudioNode = ctx.destination,
 ): AudioScheduledSourceNode {
   const { frequency, peak } = CLICK_VOICES[level];
   const osc = ctx.createOscillator();
@@ -38,7 +40,7 @@ export function scheduleClick(
   gain.gain.exponentialRampToValueAtTime(SILENT, time + DECAY_S);
 
   osc.connect(gain);
-  gain.connect(ctx.destination);
+  gain.connect(output);
   osc.start(time);
   osc.stop(time + CLICK_LENGTH_S);
   return osc;

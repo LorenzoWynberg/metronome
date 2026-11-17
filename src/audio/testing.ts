@@ -5,13 +5,14 @@ import type { TickSource } from './scheduler';
 import { TICK_MS } from './scheduler';
 
 type ParamCall = [
-  method: 'set' | 'linear' | 'exponential',
+  method: 'set' | 'linear' | 'exponential' | 'target',
   value: number,
   time: number,
 ];
 
 export class FakeAudioParam {
   readonly calls: ParamCall[] = [];
+  value = 1;
   setValueAtTime(value: number, time: number): this {
     this.calls.push(['set', value, time]);
     return this;
@@ -22,6 +23,10 @@ export class FakeAudioParam {
   }
   exponentialRampToValueAtTime(value: number, time: number): this {
     this.calls.push(['exponential', value, time]);
+    return this;
+  }
+  setTargetAtTime(value: number, time: number, _timeConstant: number): this {
+    this.calls.push(['target', value, time]);
     return this;
   }
   /** The highest value any call sets or ramps to. */

@@ -111,6 +111,25 @@ describe('engine', () => {
     },
   );
 
+  it('routes clicks through a master gain and updates it live without touching the scheduler', async () => {
+    const { store, ctx, ticks, engine } = setup();
+    store.setState({ volume: 50 });
+    await engine.start();
+    runFor(ctx, ticks, 0.1);
+    const master = ctx.gains[0]!;
+    expect(master.connections).toEqual([ctx.destination]);
+    expect(master.gain.value).toBeCloseTo(0.25);
+    expect(ctx.gains[1]?.connections).toEqual([master]);
+
+    const stopsBefore = ticks.stopCalls;
+    const startsBefore = ticks.startCalls;
+    store.setState({ volume: 100 });
+    expect(master.gain.calls.at(-1)).toEqual(['target', 1, ctx.currentTime]);
+    expect(ticks.stopCalls).toBe(stopsBefore);
+    expect(ticks.startCalls).toBe(startsBefore);
+    expect(ticks.running).toBe(true);
+  });
+
   it('stop() stops ticking, cuts future clicks, empties the beat queue and clears running', async () => {
     const { store, ctx, ticks, engine } = setup();
     await engine.start();

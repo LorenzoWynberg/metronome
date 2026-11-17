@@ -163,3 +163,8 @@ kbd {
     flex: 1 1 100%;
   }
 }
+
+.volume-readout {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
