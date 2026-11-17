@@ -28,10 +28,11 @@ export function createBeatFeed(
   };
 
   const tick = (): void => {
+    // Schedule first so a throwing subscriber cannot stall the loop.
+    frame = requestAnimationFrame(tick);
     const due = beatQueue.takeDue(currentTime());
     const last = due[due.length - 1];
     if (last) emit(last);
-    frame = requestAnimationFrame(tick);
   };
 
   const sync = (): void => {
