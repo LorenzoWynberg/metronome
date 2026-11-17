@@ -5,6 +5,7 @@
 ## Controls
 
 - BPM slider, number input and −/+ steppers (labelled "Decrease/Increase tempo by 1 BPM"); the number input commits on Enter, blur and `change` (spinner clicks and arrow keys); typing alone writes nothing.
+- Volume: a labelled 0–100 range slider (`#volume-slider`, step 1) with an `<output>` readout and `aria-valuetext` such as "80%". Input events write `volume` to the store; the slider owns the arrow keys, so the tempo shortcut skips it.
 - Tap tempo, Start/Stop (a button with `aria-pressed`) and a time-signature selector.
 - A polite `aria-live` status region announces stepper changes and taps. A separate `role=alert` region shows a message when audio fails to start or playback stops after an error.
 

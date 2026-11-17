@@ -1,10 +1,12 @@
 import { isTimeSignature, type TimeSignature } from './meter';
 import { loadSettings, saveSettings, type StorageLike } from './persistence';
 import { clampBpm } from './tempo';
+import { clampVolume } from './volume';
 
 export interface MetronomeState {
   bpm: number;
   timeSignature: TimeSignature;
+  volume: number;
   running: boolean;
 }
 
@@ -27,10 +29,15 @@ export function createStore(opts: { storage?: StorageLike } = {}): Store {
       if (isTimeSignature(patch.timeSignature)) {
         next.timeSignature = patch.timeSignature;
       }
+      if (typeof patch.volume === 'number' && Number.isFinite(patch.volume)) {
+        next.volume = clampVolume(patch.volume);
+      }
       if (typeof patch.running === 'boolean') next.running = patch.running;
 
       const settingsChanged =
-        next.bpm !== state.bpm || next.timeSignature !== state.timeSignature;
+        next.bpm !== state.bpm ||
+        next.timeSignature !== state.timeSignature ||
+        next.volume !== state.volume;
       if (!settingsChanged && next.running === state.running) return;
 
       state = next;

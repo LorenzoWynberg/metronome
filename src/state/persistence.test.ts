@@ -6,7 +6,7 @@ import {
   type StorageLike,
 } from './persistence';
 
-const defaults = { bpm: 120, timeSignature: '4/4' };
+const defaults = { bpm: 120, timeSignature: '4/4', volume: 80 };
 
 function fake(initial?: string): StorageLike & { data: Map<string, string> } {
   const data = new Map<string, string>();
@@ -21,12 +21,33 @@ function fake(initial?: string): StorageLike & { data: Map<string, string> } {
 describe('loadSettings', () => {
   it('restores valid values', () => {
     const s = fake(JSON.stringify({ bpm: 90, timeSignature: '6/8' }));
-    expect(loadSettings(s)).toEqual({ bpm: 90, timeSignature: '6/8' });
+    expect(loadSettings(s)).toEqual({ bpm: 90, timeSignature: '6/8', volume: 80 });
+  });
+
+  it('restores and clamps volume, defaulting a missing or invalid one', () => {
+    const load = (v: unknown) =>
+      loadSettings(fake(JSON.stringify({ bpm: 90, timeSignature: '6/8', volume: v })))
+        .volume;
+    expect(load(35)).toBe(35);
+    expect(load(250)).toBe(100);
+    expect(load(-3)).toBe(0);
+    expect(load('40')).toBe(80);
+    expect(load(null)).toBe(80);
+  });
+
+  it('saves volume', () => {
+    const s = fake();
+    saveSettings(s, { bpm: 90, timeSignature: '6/8', volume: 25 });
+    expect(JSON.parse(s.data.get(STORAGE_KEY)!)).toEqual({
+      bpm: 90,
+      timeSignature: '6/8',
+      volume: 25,
+    });
   });
 
   it('clamps an out-of-range bpm', () => {
     const s = fake(JSON.stringify({ bpm: 999, timeSignature: '3/4' }));
-    expect(loadSettings(s)).toEqual({ bpm: 240, timeSignature: '3/4' });
+    expect(loadSettings(s)).toEqual({ bpm: 240, timeSignature: '3/4', volume: 80 });
   });
 
   it('returns defaults without storage or key', () => {
@@ -41,10 +62,10 @@ describe('loadSettings', () => {
   it('validates each field independently', () => {
     expect(
       loadSettings(fake(JSON.stringify({ bpm: '90', timeSignature: '6/8' }))),
-    ).toEqual({ bpm: 120, timeSignature: '6/8' });
+    ).toEqual({ bpm: 120, timeSignature: '6/8', volume: 80 });
     expect(
       loadSettings(fake(JSON.stringify({ bpm: 90, timeSignature: '5/4' }))),
-    ).toEqual({ bpm: 90, timeSignature: '4/4' });
+    ).toEqual({ bpm: 90, timeSignature: '4/4', volume: 80 });
   });
 
   it('defaults when getItem throws', () => {
