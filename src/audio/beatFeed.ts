@@ -12,9 +12,9 @@ type Source = { currentTime(): number; beatQueue: BeatQueue };
 
 /**
  * The one consumer of the beat queue. While the store is running and at least
- * one view is subscribed it drains the queue against the audio clock once per animation frame and hands only
- * the latest due beat to every subscriber, so a hidden tab never replays a
- * backlog and two views never fight over `takeDue`.
+ * one view is subscribed it drains the queue against the audio clock once per
+ * animation frame and hands only the latest due beat to every subscriber, so a
+ * hidden tab never replays a backlog and two views never fight over `takeDue`.
  */
 export function createBeatFeed(
   store: Pick<Store, 'getState' | 'subscribe'>,
