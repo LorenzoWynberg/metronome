@@ -7,7 +7,8 @@ Code in `src/audio/`. It imports state modules but nothing from the UI. `main.ts
 - `engine.ts`: `createEngine(store, deps?)` returns `start()`, `stop()`, `dispose()`, `onError(cb)`, `currentTime()` and `beatQueue`. Nothing audio-related exists until `start()`, which must run in a user gesture. It keeps the store's `running` flag in step with playback.
 - `scheduler.ts`: a lookahead scheduler. Each tick (`TICK_MS` 25) schedules, on the Web Audio clock, every beat due within `SCHEDULE_AHEAD_S` (0.1 s). The first beat comes `START_DELAY_S` (0.05 s) after start.
 - `workerTickSource.ts` and `scheduler.worker.ts`: the tick source is a module Web Worker, so a hidden tab still ticks on time.
-- `click.ts`: `scheduleClick(ctx, time, level)` makes one click at the accent level (`strong`, `medium`, `normal`).
+- `click.ts`: `scheduleClick(ctx, time, level, output?)` makes one click at the accent level (`strong`, `medium`, `normal`) and connects it to `output`, which defaults to the context destination.
+- `volume.ts`: `volumeToGain(pct)` maps 0–100 to a squared linear gain (0 is silent, 100 is unity).
 - `beatQueue.ts`: the queue the visual indicator reads. Each entry is `{ beat, audioTime, level, beatsPerBar }`.
 
 ```mermaid
@@ -22,6 +23,7 @@ flowchart LR
 ## Behaviour
 
 - Tempo and time signature are read when each beat is scheduled, so a change lands on the next unscheduled beat. A new time signature restarts the bar at beat 0.
+- On `start()` the engine creates a master `GainNode` into the destination, set from the store's `volume`, and the scheduler routes every click through it. A store `volume` change while audio exists glides the gain with `setTargetAtTime` (15 ms constant); the scheduler is not involved, so beat times do not change. A change while stopped is applied when the next context is created.
 - A late tick re-anchors to `now + START_DELAY_S` rather than playing past beats.
 - Each tick prunes queue entries older than `QUEUE_RETENTION_S` (1 s) and forgets finished clicks, which bounds memory in a hidden tab.
 - `stop()` silences clicks scheduled but not yet sounded and clears the queue.
