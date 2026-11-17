@@ -11,8 +11,8 @@ export interface BeatFeed {
 type Source = { currentTime(): number; beatQueue: BeatQueue };
 
 /**
- * The one consumer of the beat queue. While the store is running it drains
- * the queue against the audio clock once per animation frame and hands only
+ * The one consumer of the beat queue. While the store is running and at least
+ * one view is subscribed it drains the queue against the audio clock once per animation frame and hands only
  * the latest due beat to every subscriber, so a hidden tab never replays a
  * backlog and two views never fight over `takeDue`.
  */
@@ -35,9 +35,15 @@ export function createBeatFeed(
     if (last) emit(last);
   };
 
+  const start = (): void => {
+    if (store.getState().running && listeners.size > 0 && frame === null) {
+      frame = requestAnimationFrame(tick);
+    }
+  };
+
   const sync = (): void => {
     if (store.getState().running) {
-      if (frame === null) frame = requestAnimationFrame(tick);
+      start();
     } else if (frame !== null) {
       cancelAnimationFrame(frame);
       frame = null;
@@ -51,8 +57,13 @@ export function createBeatFeed(
   return {
     subscribe(cb) {
       listeners.add(cb);
+      start();
       return () => {
         listeners.delete(cb);
+        if (listeners.size === 0 && frame !== null) {
+          cancelAnimationFrame(frame);
+          frame = null;
+        }
       };
     },
   };

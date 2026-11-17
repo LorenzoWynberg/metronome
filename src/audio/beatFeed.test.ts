@@ -63,7 +63,7 @@ describe('createBeatFeed', () => {
     expect(pending.size).toBe(0);
   });
 
-  it('runs no loop while stopped and starts if already running', () => {
+  it('runs no loop while stopped, and none without a subscriber', () => {
     const idle = createStore();
     createBeatFeed(idle, {
       currentTime: () => 0,
@@ -72,10 +72,41 @@ describe('createBeatFeed', () => {
     expect(pending.size).toBe(0);
     const live = createStore();
     live.setState({ running: true });
-    createBeatFeed(live, {
+    const feed = createBeatFeed(live, {
       currentTime: () => 0,
       beatQueue: createBeatQueue(),
     });
+    expect(pending.size).toBe(0);
+    feed.subscribe(vi.fn());
+    expect(pending.size).toBe(1);
+  });
+
+  it('cancels the loop when the last subscriber leaves and resumes on resubscribe', () => {
+    const store = createStore();
+    const beatQueue = createBeatQueue();
+    const feed = createBeatFeed(store, { currentTime: () => 5, beatQueue });
+    store.setState({ running: true });
+    const off = feed.subscribe(vi.fn());
+    expect(pending.size).toBe(1);
+    off();
+    expect(pending.size).toBe(0);
+    beatQueue.push(ev(3));
+    const cb = vi.fn();
+    feed.subscribe(cb);
+    runFrame();
+    expect(cb).toHaveBeenCalledWith(expect.objectContaining({ beat: 3 }));
+  });
+
+  it('keeps the loop while another subscriber remains', () => {
+    const store = createStore();
+    const feed = createBeatFeed(store, {
+      currentTime: () => 0,
+      beatQueue: createBeatQueue(),
+    });
+    store.setState({ running: true });
+    const offA = feed.subscribe(vi.fn());
+    feed.subscribe(vi.fn());
+    offA();
     expect(pending.size).toBe(1);
   });
 
