@@ -79,7 +79,7 @@ describe('store', () => {
     s.setState({ timeSignature: '6/8' });
     expect(setItem).toHaveBeenLastCalledWith(
       STORAGE_KEY,
-      JSON.stringify({ bpm: 90, timeSignature: '6/8' }),
+      JSON.stringify({ bpm: 90, timeSignature: '6/8', volume: 80 }),
     );
   });
 

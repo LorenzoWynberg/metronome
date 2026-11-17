@@ -25,7 +25,7 @@ export class FakeAudioParam {
     this.calls.push(['exponential', value, time]);
     return this;
   }
-  setTargetAtTime(value: number, time: number, _timeConstant: number): this {
+  setTargetAtTime(value: number, time: number): this {
     this.calls.push(['target', value, time]);
     return this;
   }

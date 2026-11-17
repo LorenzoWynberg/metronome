@@ -46,7 +46,10 @@ export function saveSettings(
   { bpm, timeSignature, volume }: Settings,
 ): void {
   try {
-    storage?.setItem(STORAGE_KEY, JSON.stringify({ bpm, timeSignature, volume }));
+    storage?.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ bpm, timeSignature, volume }),
+    );
   } catch {
     // Storage may be full or blocked; persistence is best-effort.
   }

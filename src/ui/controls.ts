@@ -138,7 +138,8 @@ export function mountControls(el: HTMLElement, deps: ControlsDeps): () => void {
     htmlFor: volumeSlider.id,
     textContent: 'Volume',
   });
-  const volumeReadout = make('output', { htmlFor: volumeSlider.id });
+  const volumeReadout = make('output');
+  volumeReadout.setAttribute('for', volumeSlider.id);
   volumeReadout.className = 'volume-readout';
   const volumeGroup = make('div');
   volumeGroup.className = 'control-group';

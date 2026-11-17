@@ -21,13 +21,18 @@ function fake(initial?: string): StorageLike & { data: Map<string, string> } {
 describe('loadSettings', () => {
   it('restores valid values', () => {
     const s = fake(JSON.stringify({ bpm: 90, timeSignature: '6/8' }));
-    expect(loadSettings(s)).toEqual({ bpm: 90, timeSignature: '6/8', volume: 80 });
+    expect(loadSettings(s)).toEqual({
+      bpm: 90,
+      timeSignature: '6/8',
+      volume: 80,
+    });
   });
 
   it('restores and clamps volume, defaulting a missing or invalid one', () => {
     const load = (v: unknown) =>
-      loadSettings(fake(JSON.stringify({ bpm: 90, timeSignature: '6/8', volume: v })))
-        .volume;
+      loadSettings(
+        fake(JSON.stringify({ bpm: 90, timeSignature: '6/8', volume: v })),
+      ).volume;
     expect(load(35)).toBe(35);
     expect(load(250)).toBe(100);
     expect(load(-3)).toBe(0);
@@ -47,7 +52,11 @@ describe('loadSettings', () => {
 
   it('clamps an out-of-range bpm', () => {
     const s = fake(JSON.stringify({ bpm: 999, timeSignature: '3/4' }));
-    expect(loadSettings(s)).toEqual({ bpm: 240, timeSignature: '3/4', volume: 80 });
+    expect(loadSettings(s)).toEqual({
+      bpm: 240,
+      timeSignature: '3/4',
+      volume: 80,
+    });
   });
 
   it('returns defaults without storage or key', () => {
@@ -80,11 +89,11 @@ describe('loadSettings', () => {
 });
 
 describe('saveSettings', () => {
-  it('writes exactly bpm and timeSignature', () => {
+  it('writes exactly bpm, timeSignature and volume', () => {
     const s = fake();
-    saveSettings(s, { bpm: 100, timeSignature: '2/4' });
+    saveSettings(s, { bpm: 100, timeSignature: '2/4', volume: 80 });
     expect(s.data.get(STORAGE_KEY)).toBe(
-      JSON.stringify({ bpm: 100, timeSignature: '2/4' }),
+      JSON.stringify({ bpm: 100, timeSignature: '2/4', volume: 80 }),
     );
   });
 
@@ -96,7 +105,7 @@ describe('saveSettings', () => {
       },
     };
     expect(() =>
-      saveSettings(s, { bpm: 100, timeSignature: '2/4' }),
+      saveSettings(s, { bpm: 100, timeSignature: '2/4', volume: 80 }),
     ).not.toThrow();
   });
 });
