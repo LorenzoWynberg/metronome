@@ -12,6 +12,10 @@
 
 `TEMPO_PRESETS` in `src/state/presets.ts` lists six presets: Largo 50, Adagio 70, Andante 90, Moderato 110, Allegro 130, Presto 170. `activePreset(bpm)` returns the preset whose bpm equals the given value, or `undefined`. `mountControls` renders one button per preset in a `role=group` labelled "Tempo presets", each with `aria-label` "<name> <bpm> BPM". A click sets `bpm` in the store and announces it in the status region. The pressed state is derived from the store bpm through `activePreset`, so it follows slider, number, stepper and tap changes. Styles are in `src/styles/controls.css`.
 
+## Beat counter
+
+`mountControls` takes an optional `beatFeed` dependency. A `role=group` labelled "Beat counter" holds one `aria-hidden` digit (`.beat-counter-digit`), so it is sighted-only and never announced. `beatDisplay(event, beatsPerBar)` in `src/ui/beatDisplay.ts` returns the 1-based beat, clamped to the current meter, or `–` when there is no beat; beat 1 sets `data-downbeat` on the digit. The digit repaints on every feed event and every store change, and the last beat is cleared when `running` flips. The feed is described in [Audio engine](../audio/engine.md) terms: `createBeatFeed(store, engine)` in `src/audio/beatFeed.ts` is the only consumer of the beat queue. While the store is running it drains `takeDue` once per animation frame and gives only the latest due beat to every subscriber, then emits `null` when playback stops. The next frame is scheduled before emitting, so a throwing subscriber cannot stall it. The beat indicator subscribes to the same feed.
+
 ## Shortcuts
 
 - Space toggles Start/Stop. It calls `preventDefault` on keydown and keyup so a focused button or radio does not activate twice.
