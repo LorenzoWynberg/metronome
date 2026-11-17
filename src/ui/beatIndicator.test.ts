@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createBeatFeed } from '../audio/beatFeed';
 import { createBeatQueue, type BeatEvent } from '../audio/beatQueue';
 import { createStore } from '../state/store';
 import { mountBeatIndicator } from './beatIndicator';
@@ -39,10 +40,8 @@ function setup(timeSignature: '2/4' | '3/4' | '4/4' | '6/8' = '4/4') {
   let now = 0;
   const currentTime = vi.fn(() => now);
   const el = document.createElement('div');
-  const off = mountBeatIndicator(el, {
-    store,
-    engine: { currentTime, beatQueue },
-  });
+  const feed = createBeatFeed(store, { currentTime, beatQueue });
+  const off = mountBeatIndicator(el, { store, feed });
   const ev = (e: Partial<BeatEvent> & { beat: number }): BeatEvent => ({
     audioTime: 1,
     level: 'normal',

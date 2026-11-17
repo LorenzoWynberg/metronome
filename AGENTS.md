@@ -2,7 +2,7 @@
 
 ## Documentation
 
-`metronome` is a repo of the metronome project, and its root is a package (Metronome). Trinity generates this section from the project packages and rewrites it whenever they change, so write your own notes outside it.
+`metronome` is a repo of the metronome project, and its root is a package (Metronome (GitHub Pages)). Trinity generates this section from the project packages and rewrites it whenever they change, so write your own notes outside it.
 
 Its documentation starts at [`.trinity/docs/index.md`](.trinity/docs/index.md), which links every page in the `.trinity/docs/` families:
 
