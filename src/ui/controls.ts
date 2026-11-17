@@ -1,13 +1,17 @@
+import type { BeatFeed } from '../audio/beatFeed';
+import type { BeatEvent } from '../audio/beatQueue';
 import type { Engine } from '../audio/engine';
-import { TIME_SIGNATURES } from '../state/meter';
+import { getMeter, TIME_SIGNATURES } from '../state/meter';
 import { activePreset, TEMPO_PRESETS } from '../state/presets';
 import type { Store } from '../state/store';
 import { createTapTempo, type TapTempo } from '../state/tapTempo';
 import { MAX_BPM, MIN_BPM } from '../state/tempo';
+import { beatDisplay } from './beatDisplay';
 
 export interface ControlsDeps {
   store: Store;
   engine: Pick<Engine, 'start' | 'stop' | 'onError'>;
+  beatFeed?: BeatFeed;
   tapTempo?: TapTempo;
   doc?: Document;
 }
@@ -102,6 +106,16 @@ export function mountControls(el: HTMLElement, deps: ControlsDeps): () => void {
   transport.className = 'control-group transport';
   transport.append(toggle, hint('Space'));
 
+  // Beat counter: sighted-only; the beat is also clicked, so it is not announced.
+  const counter = make('div');
+  counter.className = 'control-group beat-counter';
+  counter.setAttribute('role', 'group');
+  counter.setAttribute('aria-label', 'Beat counter');
+  const digit = make('span');
+  digit.className = 'beat-counter-digit';
+  digit.setAttribute('aria-hidden', 'true');
+  counter.append(digit);
+
   // Time signature
   const fieldset = make('fieldset');
   fieldset.className = 'control-group';
@@ -148,6 +162,7 @@ export function mountControls(el: HTMLElement, deps: ControlsDeps): () => void {
     tempo,
     presetRow,
     transport,
+    counter,
     fieldset,
     tapGroup,
     status,
@@ -308,13 +323,38 @@ export function mountControls(el: HTMLElement, deps: ControlsDeps): () => void {
   doc.addEventListener('keydown', onKeydown);
   doc.addEventListener('keyup', onKeyup);
 
+  let lastBeat: BeatEvent | null = null;
+  const paintCounter = (): void => {
+    const { timeSignature } = store.getState();
+    const { text, isDownbeat } = beatDisplay(
+      lastBeat,
+      getMeter(timeSignature).beatsPerBar,
+    );
+    digit.textContent = text;
+    if (isDownbeat) digit.dataset.downbeat = 'true';
+    else delete digit.dataset.downbeat;
+  };
+  let wasRunning = store.getState().running;
+  const offFeed = deps.beatFeed?.subscribe((event) => {
+    lastBeat = event;
+    paintCounter();
+  });
+
   paint();
-  const off = store.subscribe(paint);
+  paintCounter();
+  const off = store.subscribe(() => {
+    paint();
+    const { running } = store.getState();
+    if (running !== wasRunning) lastBeat = null;
+    wasRunning = running;
+    paintCounter();
+  });
   const offError = engine.onError(() => {
     showError('Playback stopped after an audio error.');
   });
   return () => {
     off();
+    offFeed?.();
     offError();
     doc.removeEventListener('keydown', onKeydown);
     doc.removeEventListener('keyup', onKeyup);
