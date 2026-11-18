@@ -5,6 +5,7 @@ import './styles/base.css';
 import './styles/layout.css';
 import './styles/controls.css';
 import './styles/beatIndicator.css';
+import { createBeatFeed } from './audio/beatFeed';
 import { createEngine } from './audio/engine';
 import { store } from './state/store';
 import { mountBeatIndicator } from './ui/beatIndicator';
@@ -15,10 +16,11 @@ import { mountHero } from './ui/hero';
 // gesture. The BPM readout, beat indicator and controls mount here and are
 // driven from `store` and `engine.beatQueue`.
 export const engine = createEngine(store);
+const feed = createBeatFeed(store, engine);
 
 const hero = document.getElementById('bpm-hero');
 const indicator = document.getElementById('beat-indicator');
 const controls = document.getElementById('controls');
 if (hero) mountHero(hero, store);
-if (indicator) mountBeatIndicator(indicator, { store, engine });
-if (controls) mountControls(controls, { store, engine });
+if (indicator) mountBeatIndicator(indicator, { store, feed });
+if (controls) mountControls(controls, { store, engine, beatFeed: feed });

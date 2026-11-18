@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.4.0 - 2026-11-17
+
+### New
+
+#### Beat counter in the controls
+
+The controls now include a **Beat counter** that shows which beat of the bar is playing, from 1 up to the number of beats in your time signature. Beat 1, the downbeat, is shown in bold with an accent-coloured border, so you can find the top of the bar at a glance. The number changes when you hear each click, not when the click is scheduled. It sits next to Start/Stop, so you can follow the count without looking away from the controls you're already using.
+
+When the metronome is stopped, the counter shows a dash (–). It goes back to the dash each time you stop or restart, so a new run always begins counting from the first beat you hear. If you change the time signature, the count never goes past the last beat of the new bar.
+
+The counter is only shown on screen, and screen readers don't announce it. Every beat is already audible as a click, so reading the number aloud as well would only add noise.
+
+### Improved
+
+#### Beat indicator and counter stay in step
+
+The beat indicator and the new counter now read beats from the same source, so the lit cell and the number always agree on which beat is sounding. As before, if you come back to a tab that was in the background, both show the current beat straight away and don't replay the beats you missed.
+
 ## 0.3.0 - 2026-11-16
 
 ### New: tempo shortcuts on the keyboard

@@ -8,6 +8,7 @@ import {
   vi,
   type Mock,
 } from 'vitest';
+import type { BeatEvent } from '../audio/beatQueue';
 import { createStore, type Store } from '../state/store';
 import { createTapTempo } from '../state/tapTempo';
 import { mountControls } from './controls';
@@ -551,5 +552,69 @@ describe('presets', () => {
     expect(b[4]?.getAttribute('aria-pressed')).toBe('true');
     off();
     el.remove();
+  });
+});
+
+describe('beat counter', () => {
+  let emit: (e: BeatEvent | null) => void;
+  let counterRoot: HTMLElement;
+  let counterDispose: () => void;
+  const ev = (beat: number): BeatEvent => ({
+    beat,
+    audioTime: 0,
+    level: 'normal',
+    beatsPerBar: 4,
+  });
+  const digit = (): HTMLElement =>
+    counterRoot.querySelector('.beat-counter-digit') as HTMLElement;
+
+  beforeEach(() => {
+    counterRoot = document.createElement('div');
+    document.body.append(counterRoot);
+    counterDispose = mountControls(counterRoot, {
+      store,
+      engine,
+      beatFeed: {
+        subscribe: (cb) => {
+          emit = cb;
+          return () => {};
+        },
+      },
+    });
+  });
+  afterEach(() => {
+    counterDispose();
+    counterRoot.remove();
+  });
+
+  it('counts, marks the downbeat, and resets on stop and restart', () => {
+    expect(digit().textContent).toBe('–');
+    store.setState({ running: true });
+    expect(digit().textContent).toBe('–');
+    emit(ev(0));
+    expect(digit().textContent).toBe('1');
+    expect(digit().dataset.downbeat).toBe('true');
+    emit(ev(1));
+    expect(digit().textContent).toBe('2');
+    expect(digit().dataset.downbeat).toBeUndefined();
+    store.setState({ running: false });
+    emit(null);
+    expect(digit().textContent).toBe('–');
+    store.setState({ running: true });
+    expect(digit().textContent).toBe('–');
+    emit(ev(0));
+    expect(digit().textContent).toBe('1');
+  });
+
+  it('is hidden from assistive tech with a stable group name', () => {
+    const group = counterRoot.querySelector('.beat-counter') as HTMLElement;
+    const name = group.getAttribute('aria-label');
+    store.setState({ running: true });
+    emit(ev(2));
+    expect(digit().getAttribute('aria-hidden')).toBe('true');
+    expect(group.getAttribute('aria-label')).toBe(name);
+    expect(
+      group.querySelector('[aria-live],[role=status],[role=timer]'),
+    ).toBeNull();
   });
 });

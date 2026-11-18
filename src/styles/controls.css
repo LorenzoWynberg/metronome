@@ -168,3 +168,25 @@ kbd {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
+
+.beat-counter {
+  align-items: center;
+}
+
+.beat-counter-digit {
+  min-width: 2ch;
+  box-sizing: content-box;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--text-4xl);
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  padding: 0 var(--spacing-2);
+}
+
+.beat-counter-digit[data-downbeat] {
+  font-weight: 700;
+  border-color: var(--accent);
+}
