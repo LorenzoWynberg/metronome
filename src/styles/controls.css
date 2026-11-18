@@ -164,6 +164,11 @@ kbd {
   }
 }
 
+.volume-readout {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
 .beat-counter {
   align-items: center;
 }

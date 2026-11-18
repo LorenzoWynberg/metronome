@@ -1,4 +1,5 @@
 import type { Store } from '../state/store';
+import { volumeToGain } from './volume';
 import { createBeatQueue, type BeatQueue } from './beatQueue';
 import { createScheduler, type Scheduler, type TickSource } from './scheduler';
 import { createWorkerTickSource } from './workerTickSource';
@@ -22,8 +23,13 @@ export interface Engine {
 /** How long `start()` waits for `AudioContext.resume()` before giving up. */
 export const RESUME_TIMEOUT_MS = 4000;
 
+/** Time constant of the master gain's glide to a new volume. */
+const VOLUME_SMOOTHING_S = 0.015;
+
 interface Audio {
   ctx: AudioContext;
+  /** Master volume: every click passes through it on the way to the output. */
+  master: GainNode;
   scheduler: Scheduler;
   tickSource: TickSource;
   /** Removes the `statechange` listener. */
@@ -108,6 +114,9 @@ export function createEngine(store: Store, deps: EngineDeps = {}): Engine {
       if (playing && ctx.state !== 'running') stop();
     };
     ctx.addEventListener('statechange', onStateChange);
+    const master = ctx.createGain();
+    master.gain.value = volumeToGain(store.getState().volume);
+    master.connect(ctx.destination);
     let scheduler: Scheduler;
     let tickSource: TickSource | undefined;
     try {
@@ -124,6 +133,7 @@ export function createEngine(store: Store, deps: EngineDeps = {}): Engine {
         store,
         tickSource,
         queue: beatQueue,
+        output: master,
         onError: (error) => {
           stop();
           notify(error);
@@ -142,6 +152,7 @@ export function createEngine(store: Store, deps: EngineDeps = {}): Engine {
     }
     audio = {
       ctx,
+      master,
       scheduler,
       tickSource,
       off: () => ctx.removeEventListener('statechange', onStateChange),
@@ -210,8 +221,18 @@ export function createEngine(store: Store, deps: EngineDeps = {}): Engine {
     }
   }
 
+  let lastVolume = store.getState().volume;
   store.subscribe((state) => {
     if (!state.running && playing) stop();
+    if (state.volume !== lastVolume) {
+      lastVolume = state.volume;
+      // A short ramp avoids zipper noise; the scheduler is not involved.
+      audio?.master.gain.setTargetAtTime(
+        volumeToGain(state.volume),
+        audio.ctx.currentTime,
+        VOLUME_SMOOTHING_S,
+      );
+    }
   });
 
   function dispose(): void {

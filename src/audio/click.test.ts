@@ -20,6 +20,13 @@ describe('scheduleClick', () => {
     expect(gain?.connections).toEqual([ctx.destination]);
   });
 
+  it('routes to a given output node instead of the destination', () => {
+    const ctx = new FakeAudioContext('running');
+    const output = { name: 'master' } as unknown as AudioNode;
+    scheduleClick(ctx.asAudioContext(), 2, 'normal', output);
+    expect(ctx.gains[0]?.connections).toEqual([output]);
+  });
+
   it('starts at `time` and stops the oscillator within 0.1 s', () => {
     const { ctx } = click('strong', 2);
     const osc = ctx.oscillators[0]!;

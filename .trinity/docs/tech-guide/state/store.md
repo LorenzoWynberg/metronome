@@ -10,17 +10,21 @@ Pure, DOM-free modules in `src/state/`. They import only from each other, never 
 
 `MIN_BPM` 40, `MAX_BPM` 240, `DEFAULT_BPM` 120, default signature `4/4`. `clampBpm(n)` rounds and clamps; a non-finite value becomes `DEFAULT_BPM`.
 
+## Volume (`volume.ts`)
+
+`MIN_VOLUME` 0, `MAX_VOLUME` 100, `DEFAULT_VOLUME` 80. `clampVolume(n)` rounds to a whole percent and clamps; callers check finiteness first. `loadSettings` ignores a stored `volume` that is not a finite number.
+
 ## Persistence (`persistence.ts`)
 
-Settings (`bpm`, `timeSignature`) live under the key `metronome:settings` through `StorageLike` (`getItem`/`setItem`). `loadSettings` falls back to defaults for missing, malformed or non-object data and sanitises each field. `saveSettings` swallows storage errors, so persistence is best-effort.
+Settings (`bpm`, `timeSignature`, `volume`) live under the key `metronome:settings` through `StorageLike` (`getItem`/`setItem`). `loadSettings` falls back to defaults for missing, malformed or non-object data and sanitises each field. `saveSettings` swallows storage errors, so persistence is best-effort.
 
 ## Store (`store.ts`)
 
-`createStore({ storage? })` returns `getState`, `setState(patch)` and `subscribe(listener)` (which returns an unsubscribe function). State is `{ bpm, timeSignature, running }`; `running` starts `false` and is never persisted.
+`createStore({ storage? })` returns `getState`, `setState(patch)` and `subscribe(listener)` (which returns an unsubscribe function). State is `{ bpm, timeSignature, volume, running }`; `running` starts `false` and is never persisted.
 
-- `setState` clamps `bpm`, ignores invalid time signatures and non-boolean `running`.
+- `setState` clamps `bpm` and `volume`, ignores invalid time signatures, non-finite `volume` and non-boolean `running`.
 - A patch that changes nothing notifies nobody.
-- Only a `bpm` or `timeSignature` change writes to storage.
+- Only a `bpm`, `timeSignature` or `volume` change writes to storage.
 - Listeners run over a snapshot, so unsubscribing during notification is safe. A throwing listener stops the later ones; that is not isolated.
 
 The exported `store` singleton uses `localStorage` through a guarded `defaultStorage()`, which yields no storage when reading the global throws.

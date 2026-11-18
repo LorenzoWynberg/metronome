@@ -19,8 +19,25 @@ describe('store', () => {
     expect(createStore().getState()).toEqual({
       bpm: 120,
       timeSignature: '4/4',
+      volume: 80,
       running: false,
     });
+  });
+
+  it('clamps and persists volume, ignoring non-finite values', () => {
+    const { storage, setItem } = fake();
+    const s = createStore({ storage });
+    const fn = vi.fn();
+    s.subscribe(fn);
+    s.setState({ volume: 150 });
+    expect(s.getState().volume).toBe(100);
+    s.setState({ volume: -5 });
+    expect(s.getState().volume).toBe(0);
+    s.setState({ volume: Number.NaN });
+    expect(s.getState().volume).toBe(0);
+    expect(fn).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(setItem.mock.lastCall![1])).toMatchObject({ volume: 0 });
+    expect(createStore({ storage }).getState().volume).toBe(0);
   });
 
   it('clamps bpm and ignores unknown signatures', () => {
@@ -62,7 +79,7 @@ describe('store', () => {
     s.setState({ timeSignature: '6/8' });
     expect(setItem).toHaveBeenLastCalledWith(
       STORAGE_KEY,
-      JSON.stringify({ bpm: 90, timeSignature: '6/8' }),
+      JSON.stringify({ bpm: 90, timeSignature: '6/8', volume: 80 }),
     );
   });
 
@@ -73,6 +90,7 @@ describe('store', () => {
     expect(createStore({ storage }).getState()).toEqual({
       bpm: 80,
       timeSignature: '2/4',
+      volume: 80,
       running: false,
     });
   });

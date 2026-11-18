@@ -6,6 +6,7 @@ import { activePreset, TEMPO_PRESETS } from '../state/presets';
 import type { Store } from '../state/store';
 import { createTapTempo, type TapTempo } from '../state/tapTempo';
 import { MAX_BPM, MIN_BPM } from '../state/tempo';
+import { MAX_VOLUME, MIN_VOLUME } from '../state/volume';
 import { beatDisplay } from './beatDisplay';
 
 export interface ControlsDeps {
@@ -139,6 +140,25 @@ export function mountControls(el: HTMLElement, deps: ControlsDeps): () => void {
   tapGroup.className = 'control-group transport';
   tapGroup.append(tapButton, hint('T'));
 
+  // Volume
+  const volumeSlider = make('input', {
+    type: 'range',
+    id: 'volume-slider',
+    min: String(MIN_VOLUME),
+    max: String(MAX_VOLUME),
+    step: '1',
+  });
+  const volumeLabel = make('label', {
+    htmlFor: volumeSlider.id,
+    textContent: 'Volume',
+  });
+  const volumeReadout = make('output');
+  volumeReadout.setAttribute('for', volumeSlider.id);
+  volumeReadout.className = 'volume-readout';
+  const volumeGroup = make('div');
+  volumeGroup.className = 'control-group';
+  volumeGroup.append(volumeLabel, volumeSlider, volumeReadout);
+
   const status = make('p');
   status.className = 'visually-hidden';
   status.setAttribute('role', 'status');
@@ -165,6 +185,7 @@ export function mountControls(el: HTMLElement, deps: ControlsDeps): () => void {
     counter,
     fieldset,
     tapGroup,
+    volumeGroup,
     status,
     errorMessage,
   );
@@ -176,7 +197,10 @@ export function mountControls(el: HTMLElement, deps: ControlsDeps): () => void {
   };
 
   const paint = (): void => {
-    const { bpm, timeSignature, running } = store.getState();
+    const { bpm, timeSignature, volume, running } = store.getState();
+    volumeSlider.value = String(volume);
+    volumeSlider.setAttribute('aria-valuetext', `${volume}%`);
+    volumeReadout.textContent = `${volume}%`;
     slider.value = String(bpm);
     if (doc.activeElement !== number) number.value = String(bpm);
     toggle.textContent = running ? 'Stop' : 'Start';
@@ -228,6 +252,9 @@ export function mountControls(el: HTMLElement, deps: ControlsDeps): () => void {
     // The tempo moved without an announcement, so the next commit is news.
     announced = undefined;
     store.setState({ bpm: slider.valueAsNumber });
+  });
+  volumeSlider.addEventListener('input', () => {
+    store.setState({ volume: volumeSlider.valueAsNumber });
   });
   // Spinner clicks and ArrowUp/Down fire `change`; typed digits fire only
   // `input`, so a half-typed tempo is not clamped under the cursor.
@@ -285,7 +312,9 @@ export function mountControls(el: HTMLElement, deps: ControlsDeps): () => void {
   const ownsArrows = (): boolean => {
     const a = doc.activeElement;
     return (
-      a === slider || (a !== null && a.matches('input[name="time-signature"]'))
+      a === slider ||
+      a === volumeSlider ||
+      (a !== null && a.matches('input[name="time-signature"]'))
     );
   };
   const arrowDelta = (e: KeyboardEvent): number => {
