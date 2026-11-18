@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.5.0 - 2026-11-18
+
+### New: click volume control
+
+The metronome click no longer plays at one fixed level. A **Volume** slider now sits in the controls alongside tempo, tap tempo and time signature. It runs from 0% to 100% in 1% steps, shows the current level next to it (for example "80%"), and starts at **80%**. At 0% the click is silent, and at 100% it plays at full level. The slider responds evenly across its range, so each step sounds like a similar change.
+
+You can change the volume while the metronome is playing and hear the difference straight away. The level glides to the new setting instead of jumping, so you don't hear crackle as you drag. Changing the volume doesn't affect the timing: beats stay where they are. If you change it while stopped, the new level applies the next time you press Start.
+
+Your volume is saved with your tempo and time signature, so it's where you left it on your next visit.
+
+### Keyboard and screen readers
+
+When the volume slider has focus, the arrow keys move the slider and leave the tempo alone. Screen readers read the level as a percentage, such as "80%".
+
 ## 0.4.0 - 2026-11-17
 
 ### New
